@@ -1,0 +1,251 @@
+{% extends "admin_base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<div class="content-wrapper">
+  <div class="container-xxl container-p-y">
+
+    <h4 class="fw-bold mb-4">Lifestyle Master Data</h4>
+
+    <div class="row">
+
+      <!-- MUSIC GENRES -->
+      <div class="col-md-6 mb-4">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Music Genres</strong>
+            <button class="btn btn-sm btn-primary" onclick="openAddModal('music_genre')">
+              <i class="fa fa-plus"></i> Add
+            </button>
+          </div>
+          <div class="card-body">
+            {% for obj in music_genres %}
+              <span class="badge bg-secondary me-1 mb-1">
+                {{ obj.name }}
+                <a href="javascript:void(0)" class="text-white ms-2" title="Edit"
+                   onclick="openEditModal('music_genre','{{ obj.id }}','{{ obj.name }}')">
+                  <i class="bx bx-edit"></i>
+                </a>
+                <a href="javascript:void(0)" class="text-white ms-1" title="Delete"
+                   onclick="openDeleteModal('music_genre','{{ obj.id }}')">
+                  <i class="bx bx-trash"></i>
+                </a>
+              </span>
+            {% empty %}
+              <p class="text-muted">No data</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- MUSIC ACTIVITIES -->
+      <div class="col-md-6 mb-4">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Music Activities</strong>
+            <button class="btn btn-sm btn-primary" onclick="openAddModal('music_activity')">
+              <i class="fa fa-plus"></i> Add
+            </button>
+          </div>
+          <div class="card-body">
+            {% for obj in music_activities %}
+              <span class="badge bg-secondary me-1 mb-1">
+                {{ obj.name }}
+                <a href="javascript:void(0)" class="text-white ms-2" title="Edit"
+                   onclick="openEditModal('music_activity','{{ obj.id }}','{{ obj.name }}')">
+                  <i class="bx bx-edit"></i>
+                </a>
+                <a href="javascript:void(0)" class="text-white ms-1" title="Delete"
+                   onclick="openDeleteModal('music_activity','{{ obj.id }}')">
+                  <i class="bx bx-trash"></i>
+                </a>
+              </span>
+            {% empty %}
+              <p class="text-muted">No data</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- READING PREFERENCES -->
+      <div class="col-md-6 mb-4">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Reading Preferences</strong>
+            <button class="btn btn-sm btn-primary" onclick="openAddModal('reading_preference')">
+              <i class="fa fa-plus"></i> Add
+            </button>
+          </div>
+          <div class="card-body">
+            {% for obj in reading_preferences %}
+              <span class="badge bg-secondary me-1 mb-1">
+                {{ obj.name }}
+                <a href="javascript:void(0)" class="text-white ms-2" title="Edit"
+                   onclick="openEditModal('reading_preference','{{ obj.id }}','{{ obj.name }}')">
+                  <i class="bx bx-edit"></i>
+                </a>
+                <a href="javascript:void(0)" class="text-white ms-1" title="Delete"
+                   onclick="openDeleteModal('reading_preference','{{ obj.id }}')">
+                  <i class="bx bx-trash"></i>
+                </a>
+              </span>
+            {% empty %}
+              <p class="text-muted">No data</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- MOVIE / TV GENRES -->
+      <div class="col-md-6 mb-4">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Movie / TV Genres</strong>
+            <button class="btn btn-sm btn-primary" onclick="openAddModal('movie_genre')">
+              <i class="fa fa-plus"></i> Add
+            </button>
+          </div>
+          <div class="card-body">
+            {% for obj in movie_genres %}
+              <span class="badge bg-secondary me-1 mb-1">
+                {{ obj.name }}
+                <a href="javascript:void(0)" class="text-white ms-2" title="Edit"
+                   onclick="openEditModal('movie_genre','{{ obj.id }}','{{ obj.name }}')">
+                  <i class="bx bx-edit"></i>
+                </a>
+                <a href="javascript:void(0)" class="text-white ms-1" title="Delete"
+                   onclick="openDeleteModal('movie_genre','{{ obj.id }}')">
+                  <i class="bx bx-trash"></i>
+                </a>
+              </span>
+            {% empty %}
+              <p class="text-muted">No data</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- STORY BANNERS -->
+      <div class="col-md-6 mb-4">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Story Banners</strong>
+            <button class="btn btn-sm btn-primary" onclick="openAddModal('story_banner')">
+              <i class="fa fa-plus"></i> Add
+            </button>
+          </div>
+          <div class="card-body">
+            {% for obj in story_banners %}
+              <div class="d-flex align-items-center mb-2">
+                <img src="{{ obj.image.url }}" alt="Banner {{ obj.id }}"
+                     style="height: 50px; width: auto; margin-right: 10px; border-radius: 4px;">
+                <span class="flex-grow-1">Banner {{ obj.id }}</span>
+                <a href="javascript:void(0)" class="text-primary ms-2" title="Edit"
+                   onclick="openEditModal('story_banner','{{ obj.id }}')">
+                  <i class="bx bx-edit"></i>
+                </a>
+                <a href="javascript:void(0)" class="text-danger ms-2" title="Delete"
+                   onclick="openDeleteModal('story_banner','{{ obj.id }}')">
+                  <i class="bx bx-trash"></i>
+                </a>
+              </div>
+            {% empty %}
+              <p class="text-muted">No banners added</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT MODAL -->
+<div class="modal fade" id="addModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <!-- ✨ enctype added for file upload -->
+    <form method="POST" class="modal-content" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <input type="hidden" name="action" id="actionType" value="add">
+      <input type="hidden" name="model_type" id="modelType">
+      <input type="hidden" name="object_id" id="objectId">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Add</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <label class="form-label">Name / Image</label>
+        <input type="text" name="name" id="nameField" class="form-control" style="display: none;">
+        <input type="file" name="image" id="imageField" class="form-control" accept="image/*" style="display: none;">
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openAddModal(type) {
+  const nameField = document.getElementById("nameField");
+  const imageField = document.getElementById("imageField");
+
+  document.getElementById("modalTitle").innerText = "Add";
+  document.getElementById("actionType").value = "add";
+  document.getElementById("modelType").value = type;
+  document.getElementById("objectId").value = "";
+
+  if(type === "story_banner"){
+    nameField.style.display = "none";
+    nameField.required = false;
+
+    imageField.style.display = "block";
+    imageField.required = true;
+    imageField.value = "";
+  } else {
+    nameField.style.display = "block";
+    nameField.required = true;
+    nameField.value = "";
+
+    imageField.style.display = "none";
+    imageField.required = false;
+  }
+
+  new bootstrap.Modal(document.getElementById("addModal")).show();
+}
+
+function openEditModal(type, id, name = "") {
+  const nameField = document.getElementById("nameField");
+  const imageField = document.getElementById("imageField");
+
+  document.getElementById("modalTitle").innerText = "Edit";
+  document.getElementById("actionType").value = "edit";
+  document.getElementById("modelType").value = type;
+  document.getElementById("objectId").value = id;
+
+  if(type === "story_banner"){
+    nameField.style.display = "none";
+    nameField.required = false;
+
+    imageField.style.display = "block";
+    imageField.required = false; // optional on edit
+  } else {
+    nameField.style.display = "block";
+    nameField.required = true;
+    nameField.value = name;
+
+    imageField.style.display = "none";
+    imageField.required = false;
+  }
+
+  new bootstrap.Modal(document.getElementById("addModal")).show();
+}
+</script>
+
+{% endblock %}

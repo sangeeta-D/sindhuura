@@ -1,0 +1,97 @@
+{% extends "admin_base.html" %}
+{% load static %}
+{% block content %}
+
+<div class="content-wrapper">
+  <div class="container-xxl container-p-y">
+
+    <h4 class="fw-bold mb-4">Registered Users</h4>
+
+    {% if users %}
+      <div class="card">
+        <div class="card-body p-0">
+
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>User</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Status</th>
+                  <th>Joined On</th>
+                </tr>
+              </thead>
+              <tbody>
+
+                {% for user in users %}
+                <tr>
+                  <td>{{ forloop.counter }}</td>
+
+                  <!-- PROFILE -->
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="avatar avatar-md me-3">
+                        {% if user.profile_image %}
+                          <img src="{{ user.profile_image.url }}"
+                               alt="Profile"
+                               class="rounded-circle"
+                               style="width:45px;height:45px;object-fit:cover;">
+                        {% else %}
+                          <img src="{% static 'images/default-user.png' %}"
+                               alt="Default"
+                               class="rounded-circle"
+                               style="width:45px;height:45px;object-fit:cover;">
+                        {% endif %}
+                      </div>
+                      <div>
+                        <strong>{{ user.name|default:"N/A" }}</strong>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- EMAIL -->
+                  <td>{{ user.email }}</td>
+
+                  <!-- PHONE -->
+                  <td>{{ user.phone_number|default:"—" }}</td>
+
+                  <!-- STATUS -->
+                  <td>
+                    {% if user.is_active %}
+                      <span class="badge bg-success">Active</span>
+                    {% else %}
+                      <span class="badge bg-danger">Inactive</span>
+                    {% endif %}
+                  </td>
+
+                  <!-- DATE -->
+                  <td>{{ user.date_joined|date:"d M Y, h:i A" }}</td>
+                </tr>
+                {% endfor %}
+
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+
+    {% else %}
+      <!-- NO DATA -->
+      <div class="card">
+        <div class="card-body text-center py-5">
+          <img src="/static/admin_assets/no-data.avif"
+               alt="No Data"
+               style="max-width:180px;"
+               class="mb-3">
+          <h5 class="text-muted">No registered users found</h5>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}

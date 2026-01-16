@@ -1,0 +1,256 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+
+<div class="content-wrapper">
+  <div class="container-xxl container-p-y">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h4 class="fw-bold">Sub Admins</h4>
+
+      <!-- Add Button -->
+      <button
+        class="btn btn-primary"
+        data-bs-toggle="modal"
+        data-bs-target="#addSubAdminModal"
+      >
+        + Add Sub Admin
+      </button>
+    </div>
+
+    <!-- Sub Admin List -->
+    <div class="card">
+      <div class="card-body">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Profile</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Address</th>
+              <th>Aadhaar</th>
+              <th>Status</th>
+              <th>Joined</th>
+              <th>Action</th>
+
+            </tr>
+          </thead>
+          <tbody>
+            {% for admin in sub_admins %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td>
+                {% if admin.profile_image %}
+                  <img src="{{ admin.profile_image.url }}" alt="Profile" width="40" height="40" class="rounded-circle" />
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td>{{ admin.name }}</td>
+              <td>{{ admin.email }}</td>
+              <td>
+                {% if admin.address %}
+                  {{ admin.address|truncatechars:40 }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td>
+                {% if admin.aadhaar_card %}
+                  <a href="{{ admin.aadhaar_card.url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td>
+                {% if admin.is_active %}
+                  <span class="badge bg-success">Active</span>
+                {% else %}
+                  <span class="badge bg-danger">Inactive</span>
+                {% endif %}
+              </td>
+              <td>{{ admin.date_joined|date:"d M Y" }}</td>
+              <td>
+  <div class="dropdown">
+    <button class="btn btn-sm btn-light" data-bs-toggle="dropdown">
+      <i class="bx bx-dots-vertical-rounded"></i>
+    </button>
+
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li>
+        <a class="dropdown-item" href="#">
+          <i class="bi bi-pencil"></i> Edit
+        </a>
+      </li>
+
+      <li>
+        <a class="dropdown-item text-danger"
+           href="{% url 'delete_sub_admin' admin.id %}"
+           onclick="return confirm('Are you sure?')">
+          <i class="bi bi-trash"></i> Delete
+        </a>
+      </li>
+
+      <li>
+        <button class="dropdown-item"
+                data-bs-toggle="modal"
+                data-bs-target="#assignMenuModal{{ admin.id }}">
+          <i class="bi bi-list-check"></i> Assign Menu
+        </button>
+      </li>
+    </ul>
+  </div>
+</td>
+
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="8" class="text-center text-muted">
+                No Sub Admins Found
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ADD SUB ADMIN MODAL -->
+<div class="modal fade" id="addSubAdminModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form method="POST"
+          action="{% url 'create_sub_admin' %}"
+          enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add Sub Admin</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label>Name</label>
+              <input type="text" name="name" class="form-control" required>
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label>Email</label>
+              <input type="email" name="email" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label>Password</label>
+              <input type="password" name="password" class="form-control" required>
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label>Profile Image (Optional)</label>
+              <input type="file" name="profile_image" class="form-control" accept="image/*">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label>Aadhaar Card (PDF / Image)</label>
+            <input type="file" name="aadhaar_card" class="form-control"
+                   accept=".pdf,image/*">
+          </div>
+
+          <div class="mb-3">
+            <label>Address</label>
+            <textarea name="address" class="form-control" rows="3"></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Create Sub Admin
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- assigne menu modal -->
+ {% for admin in sub_admins %}
+<div class="modal fade" id="assignMenuModal{{ admin.id }}" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form method="POST" action="{% url 'assign_sub_admin_menu' admin.id %}">
+      {% csrf_token %}
+
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            Assign Menu – {{ admin.name }}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row">
+            {% for menu in sidebar_menus %}
+              <div class="col-md-4 mb-2">
+                <div class="form-check">
+                  <input class="form-check-input"
+                         type="checkbox"
+                         name="menus"
+                         value="{{ menu.id }}"
+                         id="menu{{ admin.id }}{{ menu.id }}"
+                         {% if menu.id in admin.assigned_menu_ids %}checked{% endif %}>
+                  <label class="form-check-label" for="menu{{ admin.id }}{{ menu.id }}">
+                    {{ menu.name }}
+                  </label>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary">Save Permissions</button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+</div>
+{% endfor %}
+
+
+
+{% if messages %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    {% for message in messages %}
+      Toastify({
+        text: "{{ message|escapejs }}",
+        duration: 4000,
+        close: true,
+        gravity: "top",      // top or bottom
+        position: "right",   // left, center or right
+        backgroundColor: "{% if message.tags == 'success' %}#28a745{% elif message.tags == 'error' %}#dc3545{% elif message.tags == 'warning' %}#ffc107{% else %}#0d6efd{% endif %}",
+        stopOnFocus: true,
+      }).showToast();
+    {% endfor %}
+  });
+</script>
+{% endif %}
+
+
+{% endblock %}

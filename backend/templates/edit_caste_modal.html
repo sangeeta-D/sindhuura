@@ -1,0 +1,44 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+
+<div class="content-wrapper">
+  <div class="container-xxl container-p-y">
+
+    <div class="card col-md-6 mx-auto">
+      <div class="card-body">
+        <h5 class="mb-3">Edit Religion / Caste</h5>
+
+        <form method="POST">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            <input type="text" name="name" class="form-control"
+                   value="{{ caste.name }}" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Religion (Optional)</label>
+            <select name="parent" class="form-select">
+              <option value="">-- Religion --</option>
+              {% for religion in religions %}
+                <option value="{{ religion.id }}"
+                  {% if caste.parent and caste.parent.id == religion.id %}selected{% endif %}>
+                  {{ religion.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="text-end">
+            <a href="{% url 'castes' %}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Update</button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

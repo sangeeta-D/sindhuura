@@ -1,0 +1,273 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+
+<div class="content-wrapper">
+  <div class="container-xxl container-p-y">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h4 class="fw-bold">User Details</h4>
+      <a href="{% url 'user_list' %}" class="btn btn-outline-secondary btn-sm">
+        ← Back
+      </a>
+    </div>
+
+    <!-- ================= USER BASIC INFO ================= -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          {% if user.profile_image %}
+            <img src="{{ user.profile_image.url }}" class="rounded-circle me-3" width="80" height="80">
+          {% else %}
+            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3"
+                 style="width:80px;height:80px;font-size:32px;">
+              {{ user.email|slice:":1"|upper }}
+            </div>
+          {% endif %}
+
+          <div>
+            <h5 class="mb-1">{{ user.name|default:"—" }}</h5>
+            <p class="mb-0 text-muted">{{ user.email }}</p>
+            <span class="badge {% if user.is_active %}bg-success{% else %}bg-danger{% endif %}">
+              {% if user.is_active %}Active{% else %}Inactive{% endif %}
+            </span>
+          </div>
+        </div>
+
+        <hr>
+
+        <div class="row">
+          <div class="col-md-4"><strong>Phone:</strong> {{ user.phone_number|default:"—" }}</div>
+          <div class="col-md-4"><strong>Email Verified:</strong> {{ user.is_email_verified|yesno:"Yes,No" }}</div>
+          <div class="col-md-4"><strong>Joined:</strong> {{ user.date_joined|date:"d M Y" }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MATRIMONY PROFILE ================= -->
+    {% if user.profile %}
+    <div class="card mb-4">
+      <div class="card-header fw-semibold">Matrimony Profile</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-3"><strong>Account For:</strong> {{ user.profile.this_account_for|title }}</div>
+          <div class="col-md-3"><strong>Gender:</strong> {{ user.profile.gender|title }}</div>
+          <div class="col-md-3"><strong>DOB:</strong> {{ user.profile.date_of_birth }}</div>
+          <div class="col-md-3"><strong>Height:</strong> {{ user.profile.height }}</div>
+
+          <div class="col-md-3"><strong>Marital Status:</strong> {{ user.profile.marital_status|title }}</div>
+          <div class="col-md-3"><strong>Children:</strong> {{ user.profile.children_count|default:"—" }}</div>
+          <div class="col-md-3"><strong>Religion:</strong> {{ user.profile.religion|default:"—" }}</div>
+          <div class="col-md-3"><strong>Caste:</strong> {{ user.profile.caste|default:"—" }}</div>
+
+          <div class="col-md-3"><strong>Education:</strong> {{ user.profile.education|title }}</div>
+          <div class="col-md-3"><strong>Occupation:</strong> {{ user.profile.occupation|title }}</div>
+          <div class="col-md-3"><strong>Income:</strong> {{ user.profile.annual_income }}</div>
+          <div class="col-md-3"><strong>City:</strong> {{ user.profile.city }}</div>
+
+          <div class="col-md-12">
+            <strong>About:</strong>
+            <p class="mb-0">{{ user.profile.description|default:"—" }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+{% if user.user_images.exists %}
+<div class="card mb-4">
+  <div class="card-header fw-semibold">User Photos</div>
+  <div class="card-body">
+    
+    <!-- Carousel wrapper -->
+    <div id="userPhotosCarousel" class="carousel slide" data-bs-ride="false">
+      <div class="carousel-inner">
+        
+        <!-- Group images into slides of 4 -->
+        {% for img in user.user_images.all %}
+          {% if forloop.counter0|divisibleby:4 %}
+          <div class="carousel-item {% if forloop.first %}active{% endif %}">
+            <div class="row g-3">
+          {% endif %}
+          
+          <div class="col-md-3">
+            <div class="d-flex justify-content-center">
+              <a href="javascript:void(0)" 
+                 class="image-preview-link"
+                 data-image-url="{{ img.image.url }}"
+                 data-image-index="{{ forloop.counter0 }}">
+                <img
+                  src="{{ img.image.url }}"
+                  class="rounded img-fluid cursor-pointer"
+                  style="height:200px; width:100%; object-fit:cover; cursor:pointer;"
+                  alt="User Image"
+                >
+              </a>
+            </div>
+          </div>
+          
+          {% if forloop.counter|divisibleby:4 or forloop.last %}
+            </div>
+          </div>
+          {% endif %}
+        {% endfor %}
+        
+      </div>
+      
+      <!-- Carousel controls -->
+      {% if user.user_images.count > 4 %}
+      <button class="carousel-control-prev" type="button"
+              data-bs-target="#userPhotosCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Previous</span>
+      </button>
+      <button class="carousel-control-next" type="button"
+              data-bs-target="#userPhotosCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Next</span>
+      </button>
+      {% endif %}
+    </div>
+    
+  </div>
+</div>
+
+<!-- Image Preview Modal -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Image Preview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="previewImage" src="" class="img-fluid" style="max-height: 70vh; object-fit: contain;" alt="Preview">
+      </div>
+      <div class="modal-footer justify-content-between">
+        <div>
+          <span id="imageCounter" class="text-muted"></span>
+        </div>
+        <div>
+          <button type="button" class="btn btn-outline-secondary" id="prevImageBtn">
+            <i class="bx bx-chevron-left"></i> Previous
+          </button>
+          <button type="button" class="btn btn-outline-secondary" id="nextImageBtn">
+            Next <i class="bx bx-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.cursor-pointer {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.cursor-pointer:hover {
+  transform: scale(1.03);
+}
+.image-preview-link {
+  display: block;
+}
+.modal-body img {
+  max-width: 100%;
+  height: auto;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Get all image elements
+  const imageLinks = document.querySelectorAll('.image-preview-link');
+  const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
+  const previewImage = document.getElementById('previewImage');
+  const imageCounter = document.getElementById('imageCounter');
+  const prevImageBtn = document.getElementById('prevImageBtn');
+  const nextImageBtn = document.getElementById('nextImageBtn');
+  
+  let currentImageIndex = 0;
+  let totalImages = imageLinks.length;
+  
+  // Array to store all image URLs
+  const imageUrls = Array.from(imageLinks).map(link => link.dataset.imageUrl);
+  
+  // Set up click event for each image
+  imageLinks.forEach((link, index) => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      currentImageIndex = parseInt(this.dataset.imageIndex);
+      openPreview(currentImageIndex);
+    });
+  });
+  
+  function openPreview(index) {
+    if (index >= 0 && index < imageUrls.length) {
+      currentImageIndex = index;
+      previewImage.src = imageUrls[index];
+      imageCounter.textContent = `Image ${index + 1} of ${imageUrls.length}`;
+      modal.show();
+    }
+  }
+  
+  // Previous image button
+  prevImageBtn.addEventListener('click', function() {
+    if (currentImageIndex > 0) {
+      openPreview(currentImageIndex - 1);
+    }
+  });
+  
+  // Next image button
+  nextImageBtn.addEventListener('click', function() {
+    if (currentImageIndex < imageUrls.length - 1) {
+      openPreview(currentImageIndex + 1);
+    }
+  });
+  
+  // Keyboard navigation
+  document.addEventListener('keydown', function(e) {
+    if (modal._isShown) {
+      if (e.key === 'ArrowLeft') {
+        if (currentImageIndex > 0) {
+          openPreview(currentImageIndex - 1);
+        }
+      } else if (e.key === 'ArrowRight') {
+        if (currentImageIndex < imageUrls.length - 1) {
+          openPreview(currentImageIndex + 1);
+        }
+      } else if (e.key === 'Escape') {
+        modal.hide();
+      }
+    }
+  });
+});
+</script>
+{% endif %}
+
+
+
+    <!-- ================= LIFESTYLE (OPTIONAL) ================= -->
+    {% if user.profile and user.profile.lifestyle %}
+    <div class="card mb-4">
+      <div class="card-header fw-semibold">Personal Lifestyle</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-3"><strong>Eating:</strong> {{ user.profile.lifestyle.eating_habits|title }}</div>
+          <div class="col-md-3"><strong>Smoking:</strong> {{ user.profile.lifestyle.smoking|title }}</div>
+          <div class="col-md-3"><strong>Drinking:</strong> {{ user.profile.lifestyle.drinking|title }}</div>
+          <div class="col-md-3"><strong>Cooking:</strong> {{ user.profile.lifestyle.cooking|yesno:"Yes,No" }}</div>
+
+          <div class="col-md-6"><strong>Sports:</strong> {{ user.profile.lifestyle.favorite_sports|default:"—" }}</div>
+          <div class="col-md-6"><strong>Fitness:</strong> {{ user.profile.lifestyle.fitness_activity|default:"—" }}</div>
+
+          <div class="col-md-6"><strong>Languages:</strong> {{ user.profile.lifestyle.spoken_languages|default:"—" }}</div>
+          <div class="col-md-6"><strong>Birth Place:</strong> {{ user.profile.lifestyle.place_of_birth|default:"—" }}</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+
+{% endblock %}

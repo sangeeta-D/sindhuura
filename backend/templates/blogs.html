@@ -1,0 +1,343 @@
+{% extends "admin_base.html" %}
+{% block content %}
+{% load static %}
+<style>
+.blog-card {
+  max-height: 520px;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.blog-cover {
+  height: 180px;
+  object-fit: cover;
+}
+
+.blog-card-body {
+  overflow-y: auto;
+  max-height: 340px;
+}
+
+.blog-content {
+  font-size: 14px;
+  line-height: 1.6;
+  max-height: 120px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+/* Scrollbar styling (optional) */
+.blog-card-body::-webkit-scrollbar,
+.blog-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.blog-card-body::-webkit-scrollbar-thumb,
+.blog-content::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 10px;
+}
+</style>
+
+<div class="content-wrapper">
+  <!-- Content -->
+  <div class="container-xxl flex-grow-1 container-p-y">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h4 class="fw-bold">Blogs</h4>
+
+      <!-- Add Button -->
+      <button
+        class="btn btn-primary"
+        data-bs-toggle="modal"
+        data-bs-target="#addBlogModal"
+      >
+        + Add Blog
+      </button>
+    </div>
+
+    <!-- Blogs Table -->
+   <div class="row g-4">
+  {% if blogs %}
+    {% for blog in blogs %}
+      <div class="col-md-6">
+        <div class="card blog-card h-100">
+
+          {% if blog.cover_media %}
+            {% if blog.cover_media_type == "video" %}
+              <video class="card-img-top blog-cover" controls style="background: #000;">
+                <source src="{{ blog.cover_media.url }}" type="video/mp4">
+                Your browser does not support the video tag.
+              </video>
+            {% else %}
+              <img src="{{ blog.cover_media.url }}" class="card-img-top blog-cover" alt="{{ blog.title }}">
+            {% endif %}
+          {% else %}
+            <img src="{% static 'admin_assets/no-image.png' %}" class="card-img-top blog-cover" alt="No Image">
+          {% endif %}
+
+          <div class="card-body blog-card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h5 class="card-title mb-0">{{ blog.title }}</h5>
+              <span class="badge {% if blog.status == 'published' %}bg-success{% else %}bg-warning{% endif %}">
+                {{ blog.get_status_display }}
+              </span>
+            </div>
+
+            <p class="text-muted small mb-2">
+              {{ blog.short_description }}
+            </p>
+
+            <div class="blog-content mb-3">
+              {{ blog.content|safe }}
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mb-3">
+              {% if blog.is_featured %}
+                <span class="badge bg-info">Featured</span>
+              {% else %}
+                <span class="badge bg-secondary">Regular</span>
+              {% endif %}
+
+              <span class="badge bg-dark">Views: {{ blog.views_count }}</span>
+              <span class="badge bg-light text-dark">
+                {{ blog.created_at|date:"d M Y" }}
+              </span>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button
+                class="btn btn-sm btn-outline-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#editBlogModal"
+                onclick="populateEditForm({{ blog.id }}, '{{ blog.title|escapejs }}', '{{ blog.short_description|escapejs }}', '{{ blog.content|escapejs }}', '{{ blog.status }}', {{ blog.is_featured|lower }}, '{{ blog.cover_media_type|default:'' }}')"
+              >
+                <i class="bx bx-edit"></i> Edit
+              </button>
+
+              <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="blog_id" value="{{ blog.id }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('Delete this blog?');">
+                  <i class="bx bx-trash"></i> Delete
+                </button>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="col-12 text-center text-muted py-5">
+      <img src="{% static 'admin_assets/no-data.avif' %}" width="120">
+      <p>No blogs found</p>
+    </div>
+  {% endif %}
+</div>
+
+
+  </div>
+</div>
+
+<!-- Add Blog Modal -->
+<div class="modal fade" id="addBlogModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add">
+
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add New Blog</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Title <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="title" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Short Description <span class="text-danger">*</span></label>
+            <textarea class="form-control" name="short_description" rows="2" required></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Content <span class="text-danger">*</span></label>
+            <textarea class="form-control" name="content" rows="5" required></textarea>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Status <span class="text-danger">*</span></label>
+                <select class="form-select" name="status" required>
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Cover Media (Image/Video)</label>
+                <input type="file" class="form-control" name="cover_media" accept="image/*,video/mp4,video/webm">
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Media Type <span class="text-danger">*</span></label>
+            <select class="form-select" name="cover_media_type" id="addMediaType">
+              <option value="">-- Select Type --</option>
+              <option value="image">Image</option>
+              <option value="video">Video</option>
+            </select>
+          </div>
+
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="is_featured" id="addIsFeatured">
+            <label class="form-check-label" for="addIsFeatured">
+              Mark as Featured
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Create Blog
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Blog Modal -->
+<div class="modal fade" id="editBlogModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="edit">
+      <input type="hidden" name="blog_id" id="editBlogId">
+
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Blog</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Title <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="editTitle" name="title" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Short Description <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="editShortDescription" name="short_description" rows="2" required></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Content <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="editContent" name="content" rows="5" required></textarea>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Status <span class="text-danger">*</span></label>
+                <select class="form-select" id="editStatus" name="status" required>
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Cover Media (Image/Video)</label>
+                <input type="file" class="form-control" name="cover_media" accept="image/*,video/mp4,video/webm">
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Media Type <span class="text-danger">*</span></label>
+            <select class="form-select" name="cover_media_type" id="editMediaType">
+              <option value="">-- Select Type --</option>
+              <option value="image">Image</option>
+              <option value="video">Video</option>
+            </select>
+          </div>
+
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="is_featured" id="editIsFeatured">
+            <label class="form-check-label" for="editIsFeatured">
+              Mark as Featured
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Update Blog
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function populateEditForm(blogId, title, shortDescription, content, status, isFeatured, mediaType) {
+  document.getElementById('editBlogId').value = blogId;
+  document.getElementById('editTitle').value = title;
+  document.getElementById('editShortDescription').value = shortDescription;
+  document.getElementById('editContent').value = content;
+  document.getElementById('editStatus').value = status;
+  document.getElementById('editIsFeatured').checked = isFeatured;
+  document.getElementById('editMediaType').value = mediaType || '';
+}
+</script>
+{% if messages %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    {% for message in messages %}
+      Toastify({
+        text: "{{ message|escapejs }}",
+        duration: 3000,
+        gravity: "top",
+        position: "right",
+        close: true,
+        stopOnFocus: true,
+        style: {
+          background:
+            {% if message.tags == "success" %}
+              "linear-gradient(to right, #00b09b, #96c93d)"
+            {% elif message.tags == "error" %}
+              "linear-gradient(to right, #ff5f6d, #ffc371)"
+            {% elif message.tags == "warning" %}
+              "linear-gradient(to right, #f7971e, #ffd200)"
+            {% else %}
+              "linear-gradient(to right, #2193b0, #6dd5ed)"
+            {% endif %}
+        }
+      }).showToast();
+    {% endfor %}
+  });
+</script>
+{% endif %}
+
+
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends "admin_base.html" %}
+{% load static %}
+{% block content %}
+
+<div class="content-wrapper">
+  <div class="container-xxl container-p-y">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h4 class="fw-bold">Subscription Plans</h4>
+      <button class="btn btn-primary" onclick="openAddModal()">
+        + Add Plan
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <table class="table table-bordered align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Plan</th>
+              <th>Price (₹)</th>
+              <th>Validity (Days)</th>
+              <th>Status</th>
+              <th width="120">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for plan in plans %}
+            <tr>
+              <td>
+                <strong>{{ plan.plan_name }}</strong><br>
+                <small class="text-muted">{{ plan.description }}</small>
+              </td>
+              <td>{{ plan.price }}</td>
+              <td>{{ plan.validity }}</td>
+              <td>
+                {% if plan.is_active %}
+                  <span class="badge bg-success">Active</span>
+                {% else %}
+                  <span class="badge bg-secondary">Inactive</span>
+                {% endif %}
+              </td>
+              <td>
+                <button class="btn btn-sm btn-outline-primary"
+                        onclick="openEditModal('{{ plan.id }}','{{ plan.plan_name }}','{{ plan.price }}','{{ plan.validity }}','{{ plan.description|escapejs }}','{{ plan.is_active }}')">
+                  <i class="bx bx-edit"></i>
+                </button>
+
+                <button class="btn btn-sm btn-outline-danger"
+                        onclick="deletePlan('{{ plan.id }}')">
+                  <i class="bx bx-trash"></i>
+                </button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted">
+                No subscription plans added
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ADD / EDIT MODAL -->
+<div class="modal fade" id="planModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form method="POST" class="modal-content">
+      {% csrf_token %}
+
+      <input type="hidden" name="action" id="actionField">
+      <input type="hidden" name="plan_id" id="planIdField">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Add Plan</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body row g-3">
+
+        <div class="col-md-6">
+          <label class="form-label">Plan Name</label>
+          <input type="text" name="plan_name" id="planNameField" class="form-control" required>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Price (₹)</label>
+          <input type="number" step="0.01" name="price" id="priceField" class="form-control" required>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Validity (Days)</label>
+          <input type="number" name="validity" id="validityField" class="form-control" required>
+        </div>
+
+        <div class="col-md-12">
+          <label class="form-label">Description</label>
+          <textarea name="description" id="descriptionField" class="form-control" rows="3"></textarea>
+        </div>
+
+        <div class="col-md-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="is_active" id="isActiveField" checked>
+            <label class="form-check-label">Active</label>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button class="btn btn-primary" type="submit">
+          Save
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<script>
+function openAddModal() {
+  document.getElementById("modalTitle").innerText = "Add Plan"
+  document.getElementById("actionField").value = "add"
+  document.getElementById("planIdField").value = ""
+  document.getElementById("planNameField").value = ""
+  document.getElementById("priceField").value = ""
+  document.getElementById("validityField").value = ""
+  document.getElementById("descriptionField").value = ""
+  document.getElementById("isActiveField").checked = true
+
+  new bootstrap.Modal(document.getElementById("planModal")).show()
+}
+
+function openEditModal(id, name, price, validity, description, isActive) {
+  document.getElementById("modalTitle").innerText = "Edit Plan"
+  document.getElementById("actionField").value = "edit"
+  document.getElementById("planIdField").value = id
+  document.getElementById("planNameField").value = name
+  document.getElementById("priceField").value = price
+  document.getElementById("validityField").value = validity
+  document.getElementById("descriptionField").value = description
+  document.getElementById("isActiveField").checked = isActive === "True"
+
+  new bootstrap.Modal(document.getElementById("planModal")).show()
+}
+
+function deletePlan(id) {
+  if (!confirm("Are you sure you want to delete this plan?")) return
+
+  const form = document.createElement("form")
+  form.method = "POST"
+  form.innerHTML = `
+    {% csrf_token %}
+    <input type="hidden" name="action" value="delete">
+    <input type="hidden" name="plan_id" value="${id}">
+  `
+  document.body.appendChild(form)
+  form.submit()
+}
+</script>
+
+{% endblock %}

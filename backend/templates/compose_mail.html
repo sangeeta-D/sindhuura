@@ -1,0 +1,115 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+
+<div class="content-wrapper">
+  <div class="container-xxl container-p-y d-flex justify-content-center">
+
+    <div class="col-xl-8 col-lg-9 col-md-10">
+
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+          <div>
+            <h4 class="mb-1 fw-bold">Compose Mail</h4>
+            <span class="badge bg-label-primary">
+              To: {{ user.email }}
+            </span>
+          </div>
+          <i class="bx bx-envelope fs-3 text-primary"></i>
+        </div>
+
+        <div class="card-body p-4">
+          <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <!-- Subject -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold">
+                Subject
+              </label>
+              <input
+                type="text"
+                name="subject"
+                class="form-control form-control-lg"
+                placeholder="Enter email subject"
+                required
+              >
+            </div>
+
+            <!-- Message -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold">
+                Message
+              </label>
+              <textarea
+                name="message"
+                class="form-control"
+                rows="7"
+                placeholder="Write your message here..."
+                style="resize: vertical;"
+                required
+              ></textarea>
+            </div>
+
+            <!-- Attachments -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold">
+                Attachments
+              </label>
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="bx bx-paperclip"></i>
+                </span>
+                <input
+                  type="file"
+                  name="attachments"
+                  class="form-control"
+                  multiple
+                >
+              </div>
+              <small class="text-muted">
+                You can attach multiple files (PDF, images, docs, etc.)
+              </small>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex justify-content-end gap-2">
+              <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                Cancel
+              </a>
+              <button type="submit" class="btn btn-primary px-4">
+                <i class="bx bx-send me-1"></i> Send Mail
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+{# 🔔 Toastify Messages #}
+{% if messages %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  {% for message in messages %}
+    Toastify({
+      text: "{{ message|escapejs }}",
+      duration: 4000,
+      close: true,
+      gravity: "top",
+      position: "right",
+      backgroundColor:
+        "{% if message.tags == 'success' %}#28a745
+         {% elif message.tags == 'error' %}#dc3545
+         {% else %}#0d6efd{% endif %}",
+      stopOnFocus: true,
+    }).showToast();
+  {% endfor %}
+});
+</script>
+{% endif %}
+
+{% endblock %}
