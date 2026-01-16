@@ -451,3 +451,56 @@ def blogs(request):
     return render(request, "blogs.html", {
         "blogs": blogs
     })
+
+
+def events(request):
+    if request.method == "POST":
+        action = request.POST.get("action")
+        event_id = request.POST.get("event_id")
+        event_name = request.POST.get("event_name")
+        event_datetime = request.POST.get("event_datetime")
+        venue = request.POST.get("venue")
+        city = request.POST.get("city")
+        description = request.POST.get("description")
+        image = request.FILES.get("image")
+
+        # ➕ ADD
+        if action == "add":
+            if not all([event_name, event_datetime, venue, city, image]):
+                messages.error(request, "All fields including image are required!")
+            else:
+                Event.objects.create(
+                    event_name=event_name,
+                    event_datetime=event_datetime,
+                    venue=venue,
+                    city=city,
+                    description=description,
+                    image=image
+                )
+                messages.success(request, "Event added successfully!")
+
+        # ✏️ EDIT
+        elif action == "edit":
+            obj = get_object_or_404(Event, id=event_id)
+            obj.event_name = event_name
+            obj.event_datetime = event_datetime
+            obj.venue = venue
+            obj.city = city
+            obj.description = description
+            if image:
+                obj.image = image
+            obj.save()
+            messages.success(request, "Event updated successfully!")
+
+        # 🗑 DELETE
+        elif action == "delete":
+            obj = get_object_or_404(Event, id=event_id)
+            obj.delete()
+            messages.success(request, "Event deleted successfully!")
+
+        return redirect("events")
+
+    context = {
+        "events": Event.objects.all().order_by("-event_datetime")
+    }
+    return render(request, "events.html", context)

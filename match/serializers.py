@@ -2,7 +2,7 @@ import pytz
 from rest_framework import serializers
 from datetime import date
 from auth_api.models import MatrimonyProfile,PersonalLifestyle,UserImage
-from backend.models import Caste
+from backend.models import Caste, Event
 from auth_api.models import CustomUser
 from .models import *
 from sindhuura.datetime_utils import to_ist
@@ -309,3 +309,38 @@ class StoryBannerSerializer(serializers.ModelSerializer):
         if request:
             return request.build_absolute_uri(obj.image.url)
         return obj.image.url
+
+
+class EventSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+    event_datetime_display = serializers.SerializerMethodField()
+    event_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Event
+        fields = [
+            "id",
+            "event_name",
+            "event_datetime",
+            "event_datetime_display",
+            "event_status",
+            "venue",
+            "city",
+            "description",
+            "image",
+        ]
+
+    def get_image(self, obj):
+        request = self.context.get("request")
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        return None
+
+    def get_event_datetime_display(self, obj):
+        return obj.event_datetime.strftime("%d %b %Y, %I:%M %p")
+
+    def get_event_status(self, obj):
+        now = timezone.now()
+        if obj.event_datetime >= now:
+            return "upcoming"
+        return "completed"

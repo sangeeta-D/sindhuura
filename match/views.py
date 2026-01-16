@@ -369,3 +369,21 @@ class StoryBannerListAPIView(APIView, APIResponseMixin):
             message="Banner images fetched successfully",
             data=serializer.data
         )
+    
+
+class GetEventsAPIView(APIResponseMixin, APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        events = Event.objects.all().order_by("-event_datetime")
+
+        serializer = EventSerializer(
+            events,
+            many=True,
+            context={"request": request}
+        )
+
+        return self.success_response(
+            message="Events fetched successfully",
+            data=serializer.data
+        )

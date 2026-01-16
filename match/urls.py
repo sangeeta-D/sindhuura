@@ -15,5 +15,6 @@ urlpatterns = [
     path("my-success-stories/", MySuccessStoriesAPIView.as_view()),
     path('delete-success-story/<int:story_id>/', DeleteSuccessStoryAPIView.as_view(), name='delete-success-story'),
     path('banners/', StoryBannerListAPIView.as_view(), name='api_banners'),
+    path('events/', GetEventsAPIView.as_view(), name='api_events'),
 
 ]

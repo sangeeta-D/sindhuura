@@ -201,3 +201,17 @@ class Blog(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Event(models.Model):
+    event_name = models.CharField(max_length=255)
+    event_datetime = models.DateTimeField()
+    venue = models.CharField(max_length=255)
+    city = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to="event_images/")  # Store images in media/event_images/
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.event_name

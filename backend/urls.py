@@ -23,5 +23,6 @@ urlpatterns = [
     path("sub-admin-dashboard/", views.sub_admin_dashboard, name="sub_admin_dashboard"),
     path("send-mail/<int:user_id>/", views.compose_mail, name="send_mail"),
     path("blogs/", views.blogs, name="blogs"),
+    path('events/',views.events,name="events"),
 
 ]
