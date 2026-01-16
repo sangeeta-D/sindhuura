@@ -167,7 +167,6 @@
     <!-- ✨ enctype added for file upload -->
     <form method="POST" class="modal-content" enctype="multipart/form-data">
       {% csrf_token %}
-
       <input type="hidden" name="action" id="actionType" value="add">
       <input type="hidden" name="model_type" id="modelType">
       <input type="hidden" name="object_id" id="objectId">
@@ -190,6 +189,14 @@
     </form>
   </div>
 </div>
+
+<!-- HIDDEN DELETE FORM -->
+<form id="deleteForm" method="POST" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="delete">
+  <input type="hidden" name="model_type" id="deleteModelType">
+  <input type="hidden" name="object_id" id="deleteObjectId">
+</form>
 
 <script>
 function openAddModal(type) {
@@ -245,6 +252,15 @@ function openEditModal(type, id, name = "") {
   }
 
   new bootstrap.Modal(document.getElementById("addModal")).show();
+}
+
+// DELETE FUNCTION
+function openDeleteModal(type, id) {
+  if(confirm("Are you sure you want to delete this item?")) {
+    document.getElementById("deleteModelType").value = type;
+    document.getElementById("deleteObjectId").value = id;
+    document.getElementById("deleteForm").submit();
+  }
 }
 </script>
 

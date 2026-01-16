@@ -295,3 +295,17 @@ class UserSuccessStorySerializer(serializers.ModelSerializer):
             created_at = timezone.make_aware(created_at, timezone.utc)
 
         return created_at.astimezone(ist).strftime("%d %b %Y, %I:%M %p")
+
+
+class StoryBannerSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StoryBanner
+        fields = ['id', 'image_url', 'created_at']
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url

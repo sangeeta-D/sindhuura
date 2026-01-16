@@ -357,3 +357,15 @@ class DeleteSuccessStoryAPIView(APIResponseMixin, APIView):
             message="Success story deleted successfully",
             status_code=drf_status.HTTP_200_OK
         )
+    
+
+class StoryBannerListAPIView(APIView, APIResponseMixin):
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        banners = StoryBanner.objects.all().order_by('-created_at')
+        serializer = StoryBannerSerializer(banners, many=True, context={'request': request})
+        return self.success_response(
+            message="Banner images fetched successfully",
+            data=serializer.data
+        )
