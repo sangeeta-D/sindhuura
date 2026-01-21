@@ -36,9 +36,18 @@
         <hr>
 
         <div class="row">
-          <div class="col-md-4"><strong>Phone:</strong> {{ user.phone_number|default:"—" }}</div>
-          <div class="col-md-4"><strong>Email Verified:</strong> {{ user.is_email_verified|yesno:"Yes,No" }}</div>
-          <div class="col-md-4"><strong>Joined:</strong> {{ user.date_joined|date:"d M Y" }}</div>
+          <div class="col-md-3"><strong>Phone:</strong> {{ user.phone_number|default:"—" }}</div>
+          <div class="col-md-3"><strong>Email Verified:</strong> {{ user.is_email_verified|yesno:"Yes,No" }}</div>
+          <div class="col-md-3"><strong>Joined:</strong> {{ user.date_joined|date:"d M Y" }}</div>
+
+          <!-- Toggle Verification -->
+          <div class="col-md-3 d-flex align-items-center">
+            <strong>Verified:</strong>
+            <button id="toggleVerifiedBtn"
+                    class="btn btn-sm ms-2 {% if user.is_verified %}btn-success{% else %}btn-outline-secondary{% endif %}">
+              {% if user.is_verified %}Yes{% else %}No{% endif %}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -72,180 +81,61 @@
       </div>
     </div>
     {% endif %}
-{% if user.user_images.exists %}
-<div class="card mb-4">
-  <div class="card-header fw-semibold">User Photos</div>
-  <div class="card-body">
-    
-    <!-- Carousel wrapper -->
-    <div id="userPhotosCarousel" class="carousel slide" data-bs-ride="false">
-      <div class="carousel-inner">
-        
-        <!-- Group images into slides of 4 -->
-        {% for img in user.user_images.all %}
-          {% if forloop.counter0|divisibleby:4 %}
-          <div class="carousel-item {% if forloop.first %}active{% endif %}">
-            <div class="row g-3">
-          {% endif %}
-          
-          <div class="col-md-3">
-            <div class="d-flex justify-content-center">
-              <a href="javascript:void(0)" 
-                 class="image-preview-link"
-                 data-image-url="{{ img.image.url }}"
-                 data-image-index="{{ forloop.counter0 }}">
-                <img
-                  src="{{ img.image.url }}"
-                  class="rounded img-fluid cursor-pointer"
-                  style="height:200px; width:100%; object-fit:cover; cursor:pointer;"
-                  alt="User Image"
-                >
-              </a>
-            </div>
-          </div>
-          
-          {% if forloop.counter|divisibleby:4 or forloop.last %}
-            </div>
-          </div>
-          {% endif %}
-        {% endfor %}
-        
-      </div>
-      
-      <!-- Carousel controls -->
-      {% if user.user_images.count > 4 %}
-      <button class="carousel-control-prev" type="button"
-              data-bs-target="#userPhotosCarousel" data-bs-slide="prev">
-        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-        <span class="visually-hidden">Previous</span>
-      </button>
-      <button class="carousel-control-next" type="button"
-              data-bs-target="#userPhotosCarousel" data-bs-slide="next">
-        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-        <span class="visually-hidden">Next</span>
-      </button>
-      {% endif %}
-    </div>
-    
-  </div>
-</div>
 
-<!-- Image Preview Modal -->
-<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Image Preview</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body text-center">
-        <img id="previewImage" src="" class="img-fluid" style="max-height: 70vh; object-fit: contain;" alt="Preview">
-      </div>
-      <div class="modal-footer justify-content-between">
-        <div>
-          <span id="imageCounter" class="text-muted"></span>
-        </div>
-        <div>
-          <button type="button" class="btn btn-outline-secondary" id="prevImageBtn">
-            <i class="bx bx-chevron-left"></i> Previous
+    <!-- ================= USER PHOTOS ================= -->
+    {% if user.user_images.exists %}
+    <div class="card mb-4">
+      <div class="card-header fw-semibold">User Photos</div>
+      <div class="card-body">
+        <div id="userPhotosCarousel" class="carousel slide" data-bs-ride="false">
+          <div class="carousel-inner">
+            {% for img in user.user_images.all %}
+              {% if forloop.counter0|divisibleby:4 %}
+              <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                <div class="row g-3">
+              {% endif %}
+              
+              <div class="col-md-3">
+                <div class="d-flex justify-content-center">
+                  <a href="javascript:void(0)" 
+                     class="image-preview-link"
+                     data-image-url="{{ img.image.url }}"
+                     data-image-index="{{ forloop.counter0 }}">
+                    <img
+                      src="{{ img.image.url }}"
+                      class="rounded img-fluid cursor-pointer"
+                      style="height:200px; width:100%; object-fit:cover; cursor:pointer;"
+                      alt="User Image"
+                    >
+                  </a>
+                </div>
+              </div>
+              
+              {% if forloop.counter|divisibleby:4 or forloop.last %}
+                </div>
+              </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+
+          {% if user.user_images.count > 4 %}
+          <button class="carousel-control-prev" type="button"
+                  data-bs-target="#userPhotosCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
           </button>
-          <button type="button" class="btn btn-outline-secondary" id="nextImageBtn">
-            Next <i class="bx bx-chevron-right"></i>
+          <button class="carousel-control-next" type="button"
+                  data-bs-target="#userPhotosCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
           </button>
+          {% endif %}
         </div>
       </div>
     </div>
-  </div>
-</div>
+    {% endif %}
 
-<style>
-.cursor-pointer {
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-.cursor-pointer:hover {
-  transform: scale(1.03);
-}
-.image-preview-link {
-  display: block;
-}
-.modal-body img {
-  max-width: 100%;
-  height: auto;
-}
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Get all image elements
-  const imageLinks = document.querySelectorAll('.image-preview-link');
-  const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
-  const previewImage = document.getElementById('previewImage');
-  const imageCounter = document.getElementById('imageCounter');
-  const prevImageBtn = document.getElementById('prevImageBtn');
-  const nextImageBtn = document.getElementById('nextImageBtn');
-  
-  let currentImageIndex = 0;
-  let totalImages = imageLinks.length;
-  
-  // Array to store all image URLs
-  const imageUrls = Array.from(imageLinks).map(link => link.dataset.imageUrl);
-  
-  // Set up click event for each image
-  imageLinks.forEach((link, index) => {
-    link.addEventListener('click', function(e) {
-      e.preventDefault();
-      currentImageIndex = parseInt(this.dataset.imageIndex);
-      openPreview(currentImageIndex);
-    });
-  });
-  
-  function openPreview(index) {
-    if (index >= 0 && index < imageUrls.length) {
-      currentImageIndex = index;
-      previewImage.src = imageUrls[index];
-      imageCounter.textContent = `Image ${index + 1} of ${imageUrls.length}`;
-      modal.show();
-    }
-  }
-  
-  // Previous image button
-  prevImageBtn.addEventListener('click', function() {
-    if (currentImageIndex > 0) {
-      openPreview(currentImageIndex - 1);
-    }
-  });
-  
-  // Next image button
-  nextImageBtn.addEventListener('click', function() {
-    if (currentImageIndex < imageUrls.length - 1) {
-      openPreview(currentImageIndex + 1);
-    }
-  });
-  
-  // Keyboard navigation
-  document.addEventListener('keydown', function(e) {
-    if (modal._isShown) {
-      if (e.key === 'ArrowLeft') {
-        if (currentImageIndex > 0) {
-          openPreview(currentImageIndex - 1);
-        }
-      } else if (e.key === 'ArrowRight') {
-        if (currentImageIndex < imageUrls.length - 1) {
-          openPreview(currentImageIndex + 1);
-        }
-      } else if (e.key === 'Escape') {
-        modal.hide();
-      }
-    }
-  });
-});
-</script>
-{% endif %}
-
-
-
-    <!-- ================= LIFESTYLE (OPTIONAL) ================= -->
+    <!-- ================= LIFESTYLE ================= -->
     {% if user.profile and user.profile.lifestyle %}
     <div class="card mb-4">
       <div class="card-header fw-semibold">Personal Lifestyle</div>
@@ -269,5 +159,38 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
+<!-- ================= JS ================= -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const toggleBtn = document.getElementById('toggleVerifiedBtn');
+
+  toggleBtn.addEventListener('click', function() {
+    const isCurrentlyVerified = toggleBtn.textContent.trim() === "Yes";
+
+    fetch("{% url 'toggle_user_verified' user.id %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}"
+      },
+      body: JSON.stringify({ is_verified: !isCurrentlyVerified })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if(data.status) {
+        toggleBtn.textContent = data.response.is_verified ? "Yes" : "No";
+        toggleBtn.classList.toggle('btn-success', data.response.is_verified);
+        toggleBtn.classList.toggle('btn-outline-secondary', !data.response.is_verified);
+      } else {
+        alert(data.message);
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Something went wrong while updating verification status.");
+    });
+  });
+});
+</script>
 
 {% endblock %}

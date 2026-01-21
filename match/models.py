@@ -87,3 +87,27 @@ class StoryBanner(models.Model):
 
     def __str__(self):
         return f"Banner {self.id}"
+
+
+class ContactInfoView(models.Model):
+    """Track contact information views for subscribed users"""
+    viewer = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='contact_info_views'
+    )
+    viewed_user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='contact_info_viewed_by'
+    )
+    views_count = models.PositiveIntegerField(default=1)
+    last_viewed_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('viewer', 'viewed_user')
+        ordering = ['-last_viewed_at']
+
+    def __str__(self):
+        return f"{self.viewer.email} viewed {self.viewed_user.email} ({self.views_count} times)"

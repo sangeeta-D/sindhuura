@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login,logout
 from django.contrib import messages
@@ -9,7 +10,11 @@ from auth_api.models import CustomUser
 from django.contrib.auth.hashers import make_password
 from django.core.mail import EmailMessage
 from django.conf import settings
-
+from match.models import SuccessStory
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt  # Only if you don't use csrf token in JS
+from django.contrib.admin.views.decorators import staff_member_required
+import json
 
 def index(request):
     return render(request,'index.html')
@@ -281,6 +286,45 @@ def user_details(request, user_id):
     )
     return render(request, "user_details.html", {"user": user})
 
+  # Only admins can toggle
+@require_POST
+def toggle_user_verified(request, user_id):
+    try:
+        user = CustomUser.objects.get(id=user_id)
+    except CustomUser.DoesNotExist:
+        return JsonResponse({
+            "status": False,
+            "message": "User not found",
+            "response": []
+        }, status=404)
+
+    try:
+        data = json.loads(request.body)
+        is_verified = data.get("is_verified", None)
+        if is_verified is None:
+            return JsonResponse({
+                "status": False,
+                "message": "Missing 'is_verified' field",
+                "response": []
+            }, status=400)
+
+        user.is_verified = bool(is_verified)
+        user.save()
+
+        return JsonResponse({
+            "status": True,
+            "message": f"User verification status updated to {user.is_verified}",
+            "response": {"is_verified": user.is_verified}
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "status": False,
+            "message": str(e),
+            "response": []
+        }, status=500)
+
+
 def delete_user(request, user_id):
     user = get_object_or_404(CustomUser, id=user_id)
     user.delete()
@@ -504,3 +548,72 @@ def events(request):
         "events": Event.objects.all().order_by("-event_datetime")
     }
     return render(request, "events.html", context)
+
+
+def success_story(request):
+    stories = (
+        SuccessStory.objects
+        .select_related("created_by")
+        .prefetch_related("images")
+        .order_by("-created_at")
+    )
+    return render(request, 'success_story.html', {'stories': stories})
+
+
+def chat_views(request):
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        # ADD QUESTION
+        if action == "add_question":
+            PredefinedMessage.objects.create(
+                text=request.POST.get("question"),
+                order=request.POST.get("question_order")
+            )
+            messages.success(request, "Question added successfully")
+
+        # EDIT QUESTION
+        elif action == "edit_question":
+            q = get_object_or_404(PredefinedMessage, id=request.POST.get("question_id"))
+            q.text = request.POST.get("question")
+            q.order = request.POST.get("question_order")
+            q.save()
+            messages.success(request, "Question updated successfully")
+
+        # DELETE QUESTION
+        elif action == "delete_question":
+            get_object_or_404(
+                PredefinedMessage,
+                id=request.POST.get("question_id")
+            ).delete()
+            messages.success(request, "Question deleted successfully")
+
+        # ADD ANSWER
+        elif action == "add_answer":
+            PredefinedAnswer.objects.create(
+                message_id=request.POST.get("question_id"),
+                text=request.POST.get("answer"),
+                order=request.POST.get("answer_order")
+            )
+            messages.success(request, "Answer added successfully")
+
+        # EDIT ANSWER
+        elif action == "edit_answer":
+            a = get_object_or_404(PredefinedAnswer, id=request.POST.get("answer_id"))
+            a.text = request.POST.get("answer")
+            a.order = request.POST.get("answer_order")
+            a.save()
+            messages.success(request, "Answer updated successfully")
+
+        # DELETE ANSWER
+        elif action == "delete_answer":
+            get_object_or_404(
+                PredefinedAnswer,
+                id=request.POST.get("answer_id")
+            ).delete()
+            messages.success(request, "Answer deleted successfully")
+
+        return redirect("chat")
+
+    questions = PredefinedMessage.objects.prefetch_related("answers")
+    return render(request, "chat.html", {"questions": questions})

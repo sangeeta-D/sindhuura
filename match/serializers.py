@@ -20,6 +20,8 @@ class MatchProfileSerializer(serializers.ModelSerializer):
     profile_image = serializers.ImageField(source="user.profile_image")
     age = serializers.SerializerMethodField()
     user_id = serializers.IntegerField(source="user.id", read_only=True)
+    is_verified = serializers.BooleanField(source="user.is_verified", read_only=True)
+
 
 
     religion = CasteSerializer(read_only=True)
@@ -29,6 +31,7 @@ class MatchProfileSerializer(serializers.ModelSerializer):
         model = MatrimonyProfile
         fields = (
             'user_id',
+            'is_verified',
             'id',
             "profile_image",
             "name",
@@ -151,26 +154,58 @@ class MatrimonyProfileSerializer(serializers.ModelSerializer):
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
-    user_images = UserImageSerializer(many=True, read_only=True)
     profile = MatrimonyProfileSerializer(read_only=True)
 
     class Meta:
         model = CustomUser
         fields = [
             "id",
-            "email",
-            "phone_number",
             "name",
             "role",
             "address",
             "profile_image",
-            "aadhaar_card",
             "is_active",
-            "is_email_verified",
             "date_joined",
-            "user_images",
             "profile",
         ]
+
+class PaidUserImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserImage
+        fields = ["id", "image", "uploaded_at"]
+
+class PaidHoroscopeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PersonalLifestyle
+        fields = [
+            "time_of_birth",
+            "place_of_birth",
+            "nakshatra",
+            "rashi",
+        ]
+
+
+class RevealUserDetailsSerializer(serializers.ModelSerializer):
+    user_images = PaidUserImageSerializer(many=True, read_only=True)
+    horoscope = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            "email",
+            "phone_number",
+            "user_images",
+            "horoscope",
+        ]
+
+    def get_horoscope(self, obj):
+        try:
+            lifestyle = obj.profile.lifestyle
+            return PaidHoroscopeSerializer(lifestyle).data
+        except AttributeError:
+            return None
+
+
 
 class SuccessStoryImageSerializer(serializers.ModelSerializer):
     class Meta:

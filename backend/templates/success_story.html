@@ -1,0 +1,178 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+
+<div class="content-wrapper">
+  <div class="container-xxl flex-grow-1 container-p-y">
+
+    <h4 class="fw-bold mb-4">Success Stories</h4>
+
+    <div class="card">
+      <div class="card-body table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Couple</th>
+              <th>Wedding Date</th>
+              <th>Venue</th>
+              <th>Added By</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for story in stories %}
+            <tr class="story-row"
+                data-bs-toggle="modal"
+                data-bs-target="#storyModal"
+                data-couple="{{ story.couple_name }}"
+                data-date="{{ story.wedding_date }}"
+                data-venue="{{ story.venue }}"
+                data-addedby="{{ story.created_by.name|default:story.created_by.email|default:'Admin' }}"
+                data-description="{{ story.description|escapejs }}"
+                data-images='[
+                  {% for img in story.images.all %}
+                    "{{ img.image.url }}"{% if not forloop.last %},{% endif %}
+                  {% endfor %}
+                ]'>
+              <td>{{ forloop.counter }}</td>
+              <td><strong>{{ story.couple_name }}</strong></td>
+              <td>{{ story.wedding_date }}</td>
+              <td>{{ story.venue }}</td>
+              <td>
+                {{ story.created_by.name|default:story.created_by.email|default:"Admin" }}
+              </td>
+              <td>{{ story.created_at|date:"d M Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted">
+                No success stories found
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= DETAILS MODAL ================= -->
+<div class="modal fade" id="storyModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalCouple"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <p><strong>Wedding Date:</strong> <span id="modalDate"></span></p>
+        <p><strong>Venue:</strong> <span id="modalVenue"></span></p>
+        <p><strong>Added By:</strong> <span id="modalAddedBy"></span></p>
+
+        <p class="text-muted mt-3" id="modalDescription"></p>
+
+        <hr>
+
+        <!-- Carousel -->
+        <div id="storyCarousel" class="carousel slide" data-bs-ride="carousel">
+          <div class="carousel-inner" id="carouselImages"></div>
+
+          <button class="carousel-control-prev" type="button"
+                  data-bs-target="#storyCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon"></span>
+          </button>
+
+          <button class="carousel-control-next" type="button"
+                  data-bs-target="#storyCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon"></span>
+          </button>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= IMAGE PREVIEW MODAL ================= -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content bg-transparent border-0">
+
+      <div class="modal-body text-center position-relative">
+        <button type="button"
+                class="btn-close btn-close-white position-absolute top-0 end-0 m-3"
+                data-bs-dismiss="modal"></button>
+
+        <img id="previewImage"
+             src=""
+             class="img-fluid rounded shadow-lg preview-img">
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= SCRIPTS ================= -->
+<script>
+document.querySelectorAll(".story-row").forEach(row => {
+  row.addEventListener("click", function () {
+
+    document.getElementById("modalCouple").innerText = this.dataset.couple;
+    document.getElementById("modalDate").innerText = this.dataset.date;
+    document.getElementById("modalVenue").innerText = this.dataset.venue;
+    document.getElementById("modalAddedBy").innerText = this.dataset.addedby;
+    document.getElementById("modalDescription").innerText = this.dataset.description;
+
+    const images = JSON.parse(this.dataset.images);
+    const carousel = document.getElementById("carouselImages");
+    carousel.innerHTML = "";
+
+    images.forEach((img, index) => {
+      carousel.innerHTML += `
+        <div class="carousel-item ${index === 0 ? "active" : ""}">
+          <img src="${img}"
+               class="d-block w-100 carousel-img"
+               onclick="openImagePreview('${img}')">
+        </div>
+      `;
+    });
+  });
+});
+
+function openImagePreview(imageUrl) {
+  document.getElementById("previewImage").src = imageUrl;
+  new bootstrap.Modal(document.getElementById("imagePreviewModal")).show();
+}
+</script>
+
+<!-- ================= STYLES ================= -->
+<style>
+.table-hover tbody tr {
+  cursor: pointer;
+}
+
+.carousel-img {
+  height: 350px;
+  object-fit: cover;
+  border-radius: 10px;
+  cursor: zoom-in;
+}
+
+.preview-img {
+  max-height: 90vh;
+  object-fit: contain;
+  background: #000;
+}
+</style>
+
+{% endblock %}

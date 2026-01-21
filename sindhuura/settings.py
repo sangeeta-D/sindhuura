@@ -44,8 +44,22 @@ INSTALLED_APPS = [
     'match',
     'corsheaders',
     'chat',
+    'channels',
 ]
+ASGI_APPLICATION = "sindhuura.asgi.application"
 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
+
+# Timezone (IMPORTANT for IST)
+TIME_ZONE = "Asia/Kolkata"
+USE_TZ = True
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",

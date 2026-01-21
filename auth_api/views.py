@@ -12,7 +12,9 @@ from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from backend.models import Blog
 from django.db.models import F
-
+from django.db import transaction
+from django.db.models import Q
+from django.db import models
 from .pagination import BlogPagination
 # register API View
 class RegisterAPIView(APIResponseMixin, APIView):
@@ -381,9 +383,61 @@ class MatrimonyProfileAPIView(APIView, APIResponseMixin):
             )
 
         serializer = MatrimonyProfileSerializer(profile, context={"request": request})
+        data = serializer.data
+
+        # 🔹 Add subscription details
+        from datetime import timedelta
+        subscription_plan = None
+        subscription_limit = 0
+        views_count = 0
+        remaining_views = 0
+        expiry_date = None
+
+        # Get the latest active subscription payment
+        latest_payment = SubscriptionPayment.objects.filter(
+            user=request.user,
+            payment_status='success'
+        ).order_by('-paid_at').first()
+
+        if latest_payment:
+            # Check if subscription is still valid
+            paid_date = latest_payment.paid_at
+            validity_days = latest_payment.subscription.validity
+            expiry_date = paid_date + timedelta(days=validity_days)
+
+            if expiry_date >= timezone.now():
+                plan_name = latest_payment.subscription.plan_name.lower()
+
+                if 'silver' in plan_name:
+                    subscription_plan = 'silver'
+                    subscription_limit = 27
+                elif 'prime' in plan_name or 'gold' in plan_name:
+                    subscription_plan = 'prime_gold'
+                    subscription_limit = 45
+                elif 'diamond' in plan_name:
+                    subscription_plan = 'diamond'
+                    subscription_limit = 120
+
+                # 🔹 Get total contact views for this user
+                from match.models import ContactInfoView
+                total_views = ContactInfoView.objects.filter(
+                    viewed_user=request.user
+                ).aggregate(total=models.Sum('views_count'))['total'] or 0
+
+                views_count = total_views
+                remaining_views = max(0, subscription_limit - views_count)
+
+        data['subscription'] = {
+            'plan': subscription_plan or 'none',
+            'plan_limit': subscription_limit,
+            'contact_viewed': views_count,
+            'contact_remaining': remaining_views,
+            'expiry_date': expiry_date.isoformat() if expiry_date else None
+        }
+
         return self.success_response(
             message="Profile fetched successfully",
-            data=serializer.data
+            data=data
         )
 
     def patch(self, request):
@@ -473,9 +527,18 @@ class BlogListAPIView(APIView, APIResponseMixin):
     def get(self, request):
         blogs = Blog.objects.filter(status="published")
 
-        # Optional featured filter
+        # Featured filter
         if request.GET.get("featured") == "true":
             blogs = blogs.filter(is_featured=True)
+
+        # 🔍 Search filter
+        search = request.GET.get("search")
+        if search:
+            blogs = blogs.filter(
+                Q(title__icontains=search) |
+                Q(short_description__icontains=search) |
+                Q(content__icontains=search)
+            )
 
         paginator = BlogPagination()
         paginated_blogs = paginator.paginate_queryset(blogs, request)
@@ -495,6 +558,7 @@ class BlogListAPIView(APIView, APIResponseMixin):
                 "results": serializer.data
             }
         )
+
     
 class BlogDetailAPIView(APIView, APIResponseMixin):
     permission_classes = [AllowAny]

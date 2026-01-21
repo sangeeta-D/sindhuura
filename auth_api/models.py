@@ -53,6 +53,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         editable=False,
         db_index=True, blank=True, null=True
     )
+    is_verified = models.BooleanField(default=False)
 
     date_joined = models.DateTimeField(default=timezone.now)
 

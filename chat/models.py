@@ -32,26 +32,14 @@ class ChatRoom(models.Model):
         return f"ChatRoom {self.user1.email} & {self.user2.email}"
 
 
-class PredefinedMessage(models.Model):
-    text = models.CharField(max_length=255)
-    is_active = models.BooleanField(default=True)
-
-    def __str__(self):
-        return self.text
-    
-class PredefinedAnswer(models.Model):
-    message = models.ForeignKey(
-        PredefinedMessage,
-        on_delete=models.CASCADE,
-        related_name="answers"
-    )
-    text = models.CharField(max_length=255)
-
-    def __str__(self):
-        return self.text
-    
 
 class ChatMessage(models.Model):
+    MESSAGE_TYPE_CHOICES = (
+        ("predefined", "Predefined"),
+        ("custom", "Custom"),
+        ("system", "System"),
+    )
+
     chat_room = models.ForeignKey(
         ChatRoom,
         on_delete=models.CASCADE,
@@ -60,29 +48,41 @@ class ChatMessage(models.Model):
 
     sender = models.ForeignKey(
         CustomUser,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name="sent_messages"
     )
 
-    predefined_message = models.ForeignKey(
-        PredefinedMessage,
+    receiver = models.ForeignKey(
+        CustomUser,
         on_delete=models.CASCADE,
+        related_name="received_messages"
+    )
+
+    message_type = models.CharField(
+        max_length=20,
+        choices=MESSAGE_TYPE_CHOICES
+    )
+
+    # For predefined answers or custom text
+    message_text = models.TextField()
+
+    # Only for predefined messages (store question_id & answer index)
+    predefined_question_id = models.IntegerField(
         null=True,
         blank=True
     )
 
-    predefined_answer = models.ForeignKey(
-        PredefinedAnswer,
-        on_delete=models.CASCADE,
+    predefined_answer_index = models.IntegerField(
         null=True,
         blank=True
     )
+
+    is_read = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def clean(self):
-        # Either question OR answer must be selected
-        if not self.predefined_message and not self.predefined_answer:
-            raise ValidationError("Message or Answer is required")
+    class Meta:
+        ordering = ["created_at"]
 
     def __str__(self):
-        return f"{self.sender.email} → Chat {self.chat_room.id}"
+        return f"{self.sender.email} → {self.receiver.email} ({self.message_type})"

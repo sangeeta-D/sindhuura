@@ -24,5 +24,9 @@ urlpatterns = [
     path("send-mail/<int:user_id>/", views.compose_mail, name="send_mail"),
     path("blogs/", views.blogs, name="blogs"),
     path('events/',views.events,name="events"),
+    path('success-stories/',views.success_story,name="success_stories"),
+    path('chat/',views.chat_views,name="chat"),
+
+    path('users/<int:user_id>/toggle-verified/', views.toggle_user_verified, name='toggle_user_verified'),
 
 ]
