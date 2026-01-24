@@ -17,25 +17,29 @@ class ChatConsumer(AsyncWebsocketConsumer):
     """
 
     async def connect(self):
-        self.user = self.scope["user"]
+        print("========== WS CONNECT ==========")
+        print("RAW USER:", self.scope.get("user"))
+        print("AUTH:", self.scope["user"].is_authenticated)
+    
         self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
-        self.room_group_name = f"chat_{self.room_id}"
-
-        if not self.user.is_authenticated:
-            await self.close()
-            return
-
+        print("ROOM ID:", self.room_id)
+    
         self.chat_room = await self.get_chat_room()
-        if not self.chat_room:
+        print("CHAT ROOM:", self.chat_room)
+    
+        if not self.scope["user"].is_authenticated:
+            print("❌ USER NOT AUTHENTICATED")
             await self.close()
             return
-
-        await self.channel_layer.group_add(
-            self.room_group_name,
-            self.channel_name
-        )
-
+    
+        if not self.chat_room:
+            print("❌ CHAT ROOM NOT FOUND")
+            await self.close()
+            return
+    
         await self.accept()
+        print("✅ WS ACCEPTED")
+
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
