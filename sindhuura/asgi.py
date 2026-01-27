@@ -9,15 +9,10 @@ from channels.security.websocket import OriginValidator
 from chat.middleware import JWTAuthMiddleware
 import chat.routing
 
+
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
-    "websocket": OriginValidator(
-        JWTAuthMiddleware(
-            URLRouter(chat.routing.websocket_urlpatterns)
-        ),
-        [
-            "https://admin.sindhuura.com",
-            "http://admin.sindhuura.com",
-        ]
+    "websocket": JWTAuthMiddleware(
+        URLRouter(chat.routing.websocket_urlpatterns)
     ),
 })
