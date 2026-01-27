@@ -17,16 +17,12 @@ class ChatUserListSerializer(serializers.Serializer):
 
 class ChatMessageSerializer(serializers.ModelSerializer):
     sender = serializers.SerializerMethodField()
-    sender_id = serializers.IntegerField(source="sender.id", read_only=True)
-    receiver_id = serializers.IntegerField(source="receiver.id", read_only=True)
 
     class Meta:
         model = ChatMessage
         fields = [
             "id",
             "sender",
-            "sender_id",
-            "receiver_id",
             "message_type",
             "message_text",
             "predefined_question_id",
@@ -36,9 +32,13 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         ]
 
     def get_sender(self, obj):
-        current_user = self.context.get('current_user')
+        current_user = self.context.get("current_user")
+
+        # ✅ Message sent by logged-in user
         if obj.sender == current_user:
-            return "me"
+            return "you"
+
+        # ✅ Message sent by the other user
         return {
             "id": obj.sender.id,
             "name": obj.sender.name,
