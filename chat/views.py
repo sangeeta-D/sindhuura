@@ -80,7 +80,11 @@ class ChatHistoryAPIView(APIView, APIResponseMixin):
             .order_by("created_at")
         )
 
-        serializer = ChatMessageSerializer(messages, many=True)
+        serializer = ChatMessageSerializer(
+            messages,
+            many=True,
+            context={'current_user': user}
+        )
 
         return self.success_response(
             message="Chat history fetched successfully",

@@ -16,6 +16,7 @@ class ChatUserListSerializer(serializers.Serializer):
 
 
 class ChatMessageSerializer(serializers.ModelSerializer):
+    sender = serializers.SerializerMethodField()
     sender_id = serializers.IntegerField(source="sender.id", read_only=True)
     receiver_id = serializers.IntegerField(source="receiver.id", read_only=True)
 
@@ -23,6 +24,7 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         model = ChatMessage
         fields = [
             "id",
+            "sender",
             "sender_id",
             "receiver_id",
             "message_type",
@@ -32,3 +34,12 @@ class ChatMessageSerializer(serializers.ModelSerializer):
             "is_read",
             "created_at",
         ]
+
+    def get_sender(self, obj):
+        current_user = self.context.get('current_user')
+        if obj.sender == current_user:
+            return "me"
+        return {
+            "id": obj.sender.id,
+            "name": obj.sender.name,
+        }
