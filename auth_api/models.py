@@ -63,6 +63,13 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         blank=True
     )
 
+    fcm_token = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        db_index=True
+    )
+
     # 🆔 Aadhaar Card (PDF / Image)
     aadhaar_card = models.FileField(
         upload_to='aadhaar_cards/',

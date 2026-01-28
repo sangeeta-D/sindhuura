@@ -587,3 +587,28 @@ class BlogDetailAPIView(APIView, APIResponseMixin):
             message="Blog fetched successfully",
             data=serializer.data
         )
+    
+
+# update fcm token API
+class UpdateFCMTokenAPIView(APIView, APIResponseMixin):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = FCMTokenSerializer(
+            instance=request.user,
+            data=request.data,
+            partial=True
+        )
+
+        if not serializer.is_valid():
+            return self.error_response(serializer.errors)
+
+        serializer.save()
+
+        return self.success_response(
+            message="FCM token updated successfully",
+            data={
+                "fcm_token": serializer.data["fcm_token"]
+            },
+            status_code=drf_status.HTTP_200_OK
+        )

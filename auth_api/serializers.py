@@ -496,3 +496,16 @@ class BlogDetailSerializer(serializers.ModelSerializer):
     def get_updated_at_ist(self, obj):
         ist = pytz.timezone("Asia/Kolkata")
         return obj.updated_at.astimezone(ist).strftime("%d %b %Y, %I:%M %p")
+
+
+
+# fcm token serializer
+class FCMTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ["fcm_token"]
+
+    def validate_fcm_token(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("FCM token cannot be empty")
+        return value.strip()

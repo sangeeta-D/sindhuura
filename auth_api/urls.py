@@ -19,7 +19,9 @@ urlpatterns = [
     path("delete-image/<int:image_id>/",UserImageDeleteAPIView.as_view(),name="user-image-delete"),
 
     path("blogs/", BlogListAPIView.as_view(), name="blog-list"),
-    path("blogs/<int:blog_id>/", BlogDetailAPIView.as_view(), name="blog-detail")
+    path("blogs/<int:blog_id>/", BlogDetailAPIView.as_view(), name="blog-detail"),
+
+    path("update-fcm-token/", UpdateFCMTokenAPIView.as_view()),
 
     
 ]
