@@ -12,11 +12,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.user = self.scope["user"]
         self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
 
-        print("========== WS CONNECT ==========")
-        print("USER:", self.user)
-        print("AUTH:", self.user.is_authenticated)
-        print("ROOM ID:", self.room_id)
-
         if not self.user.is_authenticated:
             await self.close(code=4001)
             return
@@ -34,7 +29,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
         await self.accept()
-        print("✅ WS ACCEPTED")
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
@@ -45,6 +39,45 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         data = json.loads(text_data)
 
+        # =====================================================
+        # 🔥 DELETE MESSAGE (FOR EVERYONE – HARD DELETE)
+        # =====================================================
+        action = data.get("action")
+        if action == "delete_message":
+            message_id = data.get("message_id")
+
+            if not message_id:
+                await self.send(json.dumps({
+                    "type": "error",
+                    "message": "message_id is required"
+                }))
+                return
+
+            deleted = await self.delete_message(
+                message_id=message_id,
+                user=self.user
+            )
+
+            if not deleted:
+                await self.send(json.dumps({
+                    "type": "error",
+                    "message": "You are not allowed to delete this message"
+                }))
+                return
+
+            # 🔥 Notify both users
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    "type": "message_deleted",
+                    "message_id": message_id
+                }
+            )
+            return
+
+        # =====================================================
+        # 🔹 SEND MESSAGE (EXISTING LOGIC)
+        # =====================================================
         message_type = data.get("message_type")
         message_text = data.get("message_text")
         question_id = data.get("question_id")
@@ -142,14 +175,24 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "answers": suggested_answers
             }))
 
+    # =====================================================
+    # 🔹 GROUP EVENTS
+    # =====================================================
     async def chat_message(self, event):
         await self.send(json.dumps({
             "type": "message",
             **event["message"]
         }))
 
-    # ---------- DATABASE HELPERS ----------
+    async def message_deleted(self, event):
+        await self.send(json.dumps({
+            "type": "message_deleted",
+            "message_id": event["message_id"]
+        }))
 
+    # =====================================================
+    # 🔹 DATABASE HELPERS
+    # =====================================================
     @sync_to_async
     def get_chat_room(self):
         try:
@@ -184,3 +227,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
             predefined_question_id=question_id,
             predefined_answer_index=answer_index
         )
+
+    @sync_to_async
+    def delete_message(self, message_id, user):
+        try:
+            message = ChatMessage.objects.get(
+                id=message_id,
+                chat_room=self.chat_room,
+                sender=user  # 🔐 only sender can delete
+            )
+            message.delete()
+            return True
+        except ChatMessage.DoesNotExist:
+            return False
