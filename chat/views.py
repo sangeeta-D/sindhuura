@@ -2,12 +2,50 @@ from django.db.models import Q, OuterRef, Subquery
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from datetime import timedelta
 from chat.models import ChatRoom, ChatMessage
+from auth_api.models import SubscriptionPayment
 from .serializers import *
 from auth_api.api_response import APIResponseMixin
 
 class ChatUserListAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
+
+    def get_active_subscription(self, user):
+        """
+        Check if user has an active, non-expired subscription
+        Returns True if user has purchased a plan and it hasn't expired
+        """
+        try:
+            # Get the latest successful payment
+            latest_payment = (
+                SubscriptionPayment.objects
+                .filter(user=user, payment_status="success")
+                .select_related("subscription")
+                .order_by("-paid_at")
+                .first()
+            )
+
+            if not latest_payment:
+                return False
+
+            # Check if subscription plan is active
+            if not latest_payment.subscription.is_active:
+                return False
+
+            # Check if subscription hasn't expired
+            if not latest_payment.paid_at:
+                return False
+
+            expiry_date = latest_payment.paid_at + timedelta(
+                days=latest_payment.subscription.validity
+            )
+
+            return expiry_date > timezone.now()
+
+        except Exception:
+            return False
 
     def get(self, request):
         user = request.user
@@ -43,7 +81,7 @@ class ChatUserListAPIView(APIView, APIResponseMixin):
                 "unique_id": other_user.unique_id,
                 "name": other_user.name,
                 "profile_image": other_user.profile_image,
-                "is_subscribed": getattr(other_user, "is_subscribed", False),
+                "is_subscribed": self.get_active_subscription(other_user),
                 "last_message": room.last_message_text,
                 "last_message_time": room.last_message_time,
             })
