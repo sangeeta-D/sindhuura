@@ -4,7 +4,7 @@ from asgiref.sync import sync_to_async
 from .models import ChatRoom, ChatMessage
 from .services import can_send_message
 from .constants import PREDEFINED_CHAT
-from .firebase import send_push_notification
+# from .firebase import send_push_notification
 
 class ChatConsumer(AsyncWebsocketConsumer):
 
@@ -248,20 +248,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
         except ChatMessage.DoesNotExist:
             return False
         
-    @sync_to_async
-    def send_firebase_notification(self, sender, receiver, message_text, room_id):
-        # If receiver has no FCM token, skip
-        if not getattr(receiver, "fcm_token", None):
-            return
+    # @sync_to_async
+    # def send_firebase_notification(self, sender, receiver, message_text, room_id):
+    #     # If receiver has no FCM token, skip
+    #     if not getattr(receiver, "fcm_token", None):
+    #         return
 
-        send_push_notification(
-            token=receiver.fcm_token,
-            title=f"New message from {sender.name or 'Someone'}",
-            body=message_text[:100],  # limit length
-            data={
-                "type": "chat",
-                "room_id": str(room_id),
-                "sender_id": str(sender.id),
-            }
-        )
+    #     send_push_notification(
+    #         token=receiver.fcm_token,
+    #         title=f"New message from {sender.name or 'Someone'}",
+    #         body=message_text[:100],  # limit length
+    #         data={
+    #             "type": "chat",
+    #             "room_id": str(room_id),
+    #             "sender_id": str(sender.id),
+    #         }
+    #     )
 
