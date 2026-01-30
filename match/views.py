@@ -217,6 +217,9 @@ class SendMatchRequestAPIView(APIResponseMixin, APIView):
             to_user=to_user
         )
 
+        # Debug: Print notification details
+        print(f"Debug: Match request created. Sending notification to {to_user.email}, token: {to_user.fcm_token}")
+
         # Send FCM notification to the recipient
         send_push_notification(
             to_user.fcm_token,
@@ -453,6 +456,9 @@ class AcceptMatchRequestAPIView(APIView, APIResponseMixin):
         # ✅ Accept match request
         match_request.status = "accepted"
         match_request.save(update_fields=["status", "updated_at"])
+
+        # Debug: Print notification details
+        print(f"Debug: Match request accepted. Sending notification to {match_request.from_user.email}, token: {match_request.from_user.fcm_token}")
 
         # Send FCM notification to the sender
         send_push_notification(

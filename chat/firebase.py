@@ -13,7 +13,10 @@ if not firebase_admin._apps:
 
 def send_push_notification(token, title, body, data=None):
     if not token:
+        print("🔥 No FCM token provided, skipping notification")
         return
+
+    print(f"🔥 Sending FCM notification to token: {token[:10]}..., title: {title}")
 
     message = messaging.Message(
         notification=messaging.Notification(
@@ -25,6 +28,7 @@ def send_push_notification(token, title, body, data=None):
     )
 
     try:
-        messaging.send(message)
+        response = messaging.send(message)
+        print(f"🔥 FCM notification sent successfully, message ID: {response}")
     except Exception as e:
         print("🔥 Firebase error:", e)
