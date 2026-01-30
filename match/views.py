@@ -12,6 +12,8 @@ from chat.models import ChatRoom
 from datetime import timedelta
 from auth_api.models import CustomUser
 from auth_api.models import SubscriptionPayment
+from chat.firebase import send_push_notification
+from django.utils import timezone
 
 class MatchProfileListAPIView(APIResponseMixin, APIView):
     permission_classes = [IsAuthenticated]
@@ -213,6 +215,13 @@ class SendMatchRequestAPIView(APIResponseMixin, APIView):
         match_request = MatchRequest.objects.create(
             from_user=from_user,
             to_user=to_user
+        )
+
+        # Send FCM notification to the recipient
+        send_push_notification(
+            to_user.fcm_token,
+            "New Match Request",
+            f"You have received a match request from {from_user.name or from_user.email}"
         )
 
         return self.success_response(
@@ -444,6 +453,13 @@ class AcceptMatchRequestAPIView(APIView, APIResponseMixin):
         # ✅ Accept match request
         match_request.status = "accepted"
         match_request.save(update_fields=["status", "updated_at"])
+
+        # Send FCM notification to the sender
+        send_push_notification(
+            match_request.from_user.fcm_token,
+            "Match Request Accepted",
+            f"Your match request to {match_request.to_user.name or match_request.to_user.email} has been accepted"
+        )
 
         # ✅ Ensure consistent user order
         user1, user2 = sorted(

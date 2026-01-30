@@ -15,12 +15,12 @@
       content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
     />
 
-    <title>Dashboard - Analytics | Sneat - Bootstrap 5 HTML Admin Template - Pro</title>
+    <title>Sindhuura</title>
 
     <meta name="description" content="" />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/static/admin_assets/assets/img/favicon/favicon.ico" />
+    <!-- <link rel="icon" type="image/x-icon" href="/static/admin_assets/assets/img/favicon/favicon.ico" /> -->
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -55,7 +55,47 @@
     <script src="/static/admin_assets/assets/js/config.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<style>
+  .user-count {
+  background: rgba(13, 110, 253, 0.08);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
 
+.user-count:hover {
+  background: rgba(13, 110, 253, 0.15);
+}
+
+.user-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.user-text {
+  display: flex;
+  align-items: center;
+}
+
+.user-text .badge {
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 12px;
+}
+
+/* 📱 Mobile optimization */
+@media (max-width: 576px) {
+  .user-count {
+    padding: 5px 10px;
+  }
+
+  .user-icon {
+    font-size: 14px;
+  }
+}
+
+</style>
   </head>
 
   <body>
@@ -66,11 +106,11 @@
 
         <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
           <div class="app-brand demo">
-            <a href="index.html" class="app-brand-link">
+            <a href="{% if request.user.role == 'admin' %}{% url 'admin_dashboard' %}{% elif request.user.role == 'sub_admin' %}{% url 'sub_admin_dashboard' %}{% endif %}" class="app-brand-link">
               <span class="app-brand-logo demo">
                 <img src="/static/admin_assets/assets/img/logo-1.png" alt="" height="60px" width="60px">
               </span>
-              <span class="app-brand-text demo menu-text fw-bolder ms-2">Sindhuura</span>
+              <span class="app-brand-text demo menu-text fw-bolder ms-2" style="font-size: 20px;">Sindhuura<small>.com</small></span>
             </a>
 
             <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto d-block d-xl-none">
@@ -132,38 +172,27 @@
 
             <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
               <!-- Search -->
-              <div class="navbar-nav align-items-center">
-                <div class="nav-item d-flex align-items-center">
-                  <i class="bx bx-search fs-4 lh-0"></i>
-                  <input
-                    type="text"
-                    class="form-control border-0 shadow-none"
-                    placeholder="Search..."
-                    aria-label="Search..."
-                  />
-                </div>
-              </div>
+           
               <!-- /Search -->
 
               <ul class="navbar-nav flex-row align-items-center ms-auto">
                 <!-- Place this tag where you want the button to render. -->
-                <li class="nav-item lh-1 me-3">
-                  <a
-                    class="github-button"
-                    href="https://github.com/themeselection/sneat-html-admin-template-free"
-                    data-icon="octicon-star"
-                    data-size="large"
-                    data-show-count="true"
-                    aria-label="Star themeselection/sneat-html-admin-template-free on GitHub"
-                    >Star</a
-                  >
-                </li>
+                <li class="nav-item me-3">
+  <div class="user-count d-flex align-items-center">
+    <span class="user-icon">👥</span>
+    <span class="user-text ms-2">
+      <span class="label d-none d-md-inline">Registered Users</span>
+      <span class="badge bg-primary ms-1">{{ user_count }}</span>
+    </span>
+  </div>
+</li>
+
 
                 <!-- User -->
                 <li class="nav-item navbar-dropdown dropdown-user dropdown">
                   <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
                     <div class="avatar avatar-online">
-                      <img src="/static/admin_assets/assets/img/avatars/1.png" alt class="w-px-40 h-auto rounded-circle" />
+                      <img src="/static/admin_assets/assets/img/default-user.png" alt class="w-px-40 h-auto rounded-circle" />
                     </div>
                   </a>
                   <ul class="dropdown-menu dropdown-menu-end">
@@ -172,7 +201,7 @@
                         <div class="d-flex">
                           <div class="flex-shrink-0 me-3">
                             <div class="avatar avatar-online">
-                              <img src="/static/admin_assets/assets/img/avatars/1.png" alt class="w-px-40 h-auto rounded-circle" />
+                              <img src="/static/admin_assets/assets/img/default-user.png" alt class="w-px-40 h-auto rounded-circle" />
                             </div>
                           </div>
                           <div class="flex-grow-1">

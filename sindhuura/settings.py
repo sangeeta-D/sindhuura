@@ -76,6 +76,7 @@ TEMPLATES = [
 
                 # 👇 your custom sidebar processor
                 "backend.context_processors.sidebar_menus",
+                "backend.context_processors.registered_user_count",
             ],
         },
     },

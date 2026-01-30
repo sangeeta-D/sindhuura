@@ -6,6 +6,42 @@
 
     <h4 class="fw-bold mb-4">User List</h4>
 
+    <!-- Filters -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <form method="get" class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Gender</label>
+            <select name="gender" class="form-select">
+              <option value="">All</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">City</label>
+            <input type="text" name="city" class="form-control" placeholder="Enter city">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">State</label>
+            <input type="text" name="state" class="form-control" placeholder="Enter state">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Premium</label>
+            <select name="is_premium" class="form-select">
+              <option value="">All</option>
+              <option value="1">Premium</option>
+              <option value="0">Non-Premium</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary">Filter</button>
+            <a href="{% url 'user_list' %}" class="btn btn-secondary">Clear</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-body">
         <div class="row mb-3">
@@ -29,7 +65,7 @@
                 <th>Gender</th>
                 <th>Location</th>
                 <th>Joined On</th>
-                <th>Status</th>
+                <th>Premium</th>
                 <th class="text-center">Actions</th>
               </tr>
             </thead>
@@ -52,7 +88,12 @@
                       </div>
                     {% endif %}
                     <div>
-                      <div class="fw-semibold">{{ user.name|default:"—" }}</div>
+                      <div class="fw-semibold d-flex align-items-center">
+                        {{ user.name|default:"—" }}
+                        {% if user.is_verified %}
+                          <i class="bx bxs-star text-warning ms-2" style="font-size: 1.2em;"></i>
+                        {% endif %}
+                      </div>
                       <small class="text-muted">{{ user.email }}</small>
                     </div>
                   </div>
@@ -80,10 +121,10 @@
                 <td>{{ user.date_joined|date:"d M Y" }}</td>
 
                 <td>
-                  {% if user.is_active %}
-                    <span class="badge bg-success">Active</span>
+                  {% if user.is_premium %}
+                    <span class="badge bg-warning">Premium</span>
                   {% else %}
-                    <span class="badge bg-danger">Inactive</span>
+                    <span class="badge bg-secondary">Free</span>
                   {% endif %}
                 </td>
 
@@ -123,7 +164,7 @@
               </tr>
               {% empty %}
               <tr>
-                <td colspan="9" class="text-center text-muted">
+                <td colspan="8" class="text-center text-muted">
                   No users found
                 </td>
               </tr>

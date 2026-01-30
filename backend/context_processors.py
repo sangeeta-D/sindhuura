@@ -1,5 +1,5 @@
 from backend.models import SidebarMenu
-
+from auth_api.models import CustomUser
 def sidebar_menus(request):
     if not request.user.is_authenticated:
         return {"sidebar_menus": []}
@@ -19,3 +19,8 @@ def sidebar_menus(request):
         menus = SidebarMenu.objects.none()
 
     return {"sidebar_menus": menus}
+
+def registered_user_count(request):
+    return {
+        "user_count": CustomUser.objects.filter(is_active=True).count()
+    }

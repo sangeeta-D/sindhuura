@@ -2,12 +2,13 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login,logout
 from django.contrib import messages
-from auth_api.models import CustomUser as User
-from match.models import StoryBanner
+from auth_api.models import CustomUser as User, SubscriptionPayment
+from match.models import StoryBanner, MatchRequest, SuccessStory
 from .models import *
 from django.shortcuts import get_object_or_404
 from auth_api.models import CustomUser
 from django.contrib.auth.hashers import make_password
+from django.db.models import Exists, OuterRef, Count, Sum
 from django.core.mail import EmailMessage
 from django.conf import settings
 from match.models import SuccessStory
@@ -65,7 +66,39 @@ def admin_login(request):
 def admin_dashboard(request):
     # if not request.user.is_authenticated or not (request.user.is_staff or request.user.is_superuser):
     #     return redirect('admin_login')
-    return render(request, 'admin_dashboard.html')
+
+    # Statistics
+    total_users = CustomUser.objects.filter(is_staff=False).count()
+    verified_users = CustomUser.objects.filter(is_staff=False, is_verified=True).count()
+    premium_users = SubscriptionPayment.objects.filter(payment_status='success').values('user').distinct().count()
+    total_matches = MatchRequest.objects.count()
+    accepted_matches = MatchRequest.objects.filter(status='accepted').count()
+    success_stories = SuccessStory.objects.count()
+    blogs = Blog.objects.count()
+    events = Event.objects.count()
+    total_revenue = SubscriptionPayment.objects.filter(payment_status='success').aggregate(total=Sum('amount'))['total'] or 0
+
+    # Recent activities (last 10)
+    recent_users = CustomUser.objects.filter(is_staff=False).order_by('-date_joined')[:5]
+    recent_matches = MatchRequest.objects.select_related('from_user', 'to_user').order_by('-created_at')[:5]
+    recent_payments = SubscriptionPayment.objects.select_related('user').filter(payment_status='success').order_by('-paid_at')[:5]
+
+    context = {
+        'total_users': total_users,
+        'verified_users': verified_users,
+        'premium_users': premium_users,
+        'total_matches': total_matches,
+        'accepted_matches': accepted_matches,
+        'success_stories': success_stories,
+        'blogs': blogs,
+        'events': events,
+        'total_revenue': total_revenue,
+        'recent_users': recent_users,
+        'recent_matches': recent_matches,
+        'recent_payments': recent_payments,
+    }
+
+    return render(request, 'admin_dashboard.html', context)
 
 def sub_admin_dashboard(request):
     if not request.user.is_authenticated or not (request.user.is_staff or request.user.is_superuser):
@@ -267,12 +300,25 @@ def registered_user_list(request):
 
 
 def user_list(request):
-    users = (
-        CustomUser.objects
-        .filter(is_staff=False)
-        .select_related("profile")
-        .order_by("-date_joined")
-    )
+    users = CustomUser.objects.filter(is_staff=False).select_related("profile").annotate(is_premium=Exists(SubscriptionPayment.objects.filter(user=OuterRef('pk'), payment_status='success')))
+
+    # Filters
+    gender = request.GET.get('gender')
+    city = request.GET.get('city')
+    state = request.GET.get('state')
+    is_premium = request.GET.get('is_premium')
+
+    if gender:
+        users = users.filter(profile__gender=gender)
+    if city:
+        users = users.filter(profile__city__icontains=city)
+    if state:
+        users = users.filter(profile__state__icontains=state)
+    if is_premium:
+        users = users.filter(is_premium=bool(int(is_premium)))
+
+    users = users.order_by("-date_joined")
+
     return render(request, "user_list.html", {
         "users": users
     })
