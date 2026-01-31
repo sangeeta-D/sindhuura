@@ -7,7 +7,10 @@ from rest_framework.permissions import IsAuthenticated,AllowAny
 from rest_framework import status as drf_status
 from django.contrib.auth import authenticate
 import razorpay
+import re
 from django.conf import settings
+from django.core.cache import cache
+from django.contrib.auth.hashers import make_password, check_password
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from backend.models import Blog
@@ -16,6 +19,8 @@ from django.db import transaction
 from django.db.models import Q
 from django.db import models
 from .pagination import BlogPagination
+from .utils import send_sms_otp
+import random
 # register API View
 class RegisterAPIView(APIResponseMixin, APIView):
 
@@ -612,3 +617,137 @@ class UpdateFCMTokenAPIView(APIView, APIResponseMixin):
             },
             status_code=drf_status.HTTP_200_OK
         )
+    
+
+import re
+# views.py
+import random
+import re
+from django.core.cache import cache
+
+def validate_and_format_phone(phone_number):
+    """
+    Validate and format Indian phone number
+    """
+    print(f"\n🔍 Validating phone: '{phone_number}'")
+    
+    # Remove any spaces, dashes, or plus signs
+    phone = re.sub(r'[\s\-\+]', '', phone_number)
+    print(f"🔍 After cleanup: '{phone}'")
+    
+    # If it starts with 91 and is 12 digits
+    if phone.startswith('91') and len(phone) == 12:
+        print(f"✅ Valid format (12 digits with 91): {phone}")
+        return phone
+    
+    # If it's 10 digits, add country code
+    if len(phone) == 10 and phone[0] in '6789':
+        result = f"91{phone}"
+        print(f"✅ Valid format (10 digits): {result}")
+        return result
+    
+    print(f"❌ Invalid format")
+    return None
+
+
+class SendOTPAPIView(APIView, APIResponseMixin):
+    def post(self, request):
+        print("\n" + "🎬 " + "=" * 60)
+        print("🎬 SEND OTP API CALLED")
+        print("🎬 " + "=" * 60)
+        
+        phone_number = request.data.get("phone_number", "").strip()
+        print(f"📥 Received phone_number: '{phone_number}'")
+
+        if not phone_number:
+            print("❌ Phone number is empty")
+            return self.error_response("Phone number is required")
+        
+        # Validate and format phone number
+        formatted_phone = validate_and_format_phone(phone_number)
+        
+        if not formatted_phone:
+            print("❌ Phone validation failed")
+            return self.error_response("Invalid phone number format. Use 10-digit Indian mobile number")
+        
+        print(f"✅ Formatted phone: {formatted_phone}")
+        
+        # Rate limiting
+        cache_key = f"otp_limit_{formatted_phone}"
+        print(f"\n🔒 Checking rate limit with key: {cache_key}")
+        
+        if cache.get(cache_key):
+            print("⏳ Rate limit hit - user must wait")
+            return self.error_response("Please wait 1 minute before requesting another OTP")
+        
+        print("✅ Rate limit check passed")
+
+        # Generate OTP
+        otp = str(random.randint(100000, 999999))
+        print(f"\n🎲 Generated OTP: {otp}")
+        
+        # Delete old unverified OTPs
+        deleted_count = PhoneOTP.objects.filter(
+            phone_number=formatted_phone,
+            is_verified=False
+        ).delete()[0]
+        print(f"🗑️ Deleted {deleted_count} old unverified OTPs")
+
+        # Create new OTP
+        print(f"💾 Creating new OTP record in database...")
+        otp_obj = PhoneOTP.objects.create(
+            phone_number=formatted_phone,
+            otp=otp
+        )
+        print(f"✅ OTP record created: ID={otp_obj.id}")
+
+        # Send SMS
+        print(f"\n📤 Attempting to send SMS...")
+        sms_result = send_sms_otp(formatted_phone, otp)
+        print(f"\n📬 SMS Send Result: {sms_result}")
+        
+        if not sms_result:
+            print("❌ SMS sending failed")
+            return self.error_response(
+                "Failed to send OTP",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        print("✅ SMS sent successfully")
+        
+        # Set rate limit
+        cache.set(cache_key, True, 60)
+        print(f"🔒 Rate limit set for 60 seconds")
+
+        print("🎉 OTP process completed successfully")
+        print("=" * 70 + "\n")
+        
+        return self.success_response(message="OTP sent successfully")
+
+class VerifyOTPAPIView(APIView, APIResponseMixin):
+    def post(self, request):
+        phone_number = request.data.get("phone_number", "").strip()
+        otp = request.data.get("otp", "").strip()
+
+        if not phone_number or not otp:
+            return self.error_response("Phone number and OTP are required")
+
+        try:
+            otp_obj = PhoneOTP.objects.get(
+                phone_number=phone_number,
+                is_verified=False
+            )
+        except PhoneOTP.DoesNotExist:
+            return self.error_response("Invalid OTP")
+
+        if otp_obj.is_expired():
+            return self.error_response("OTP expired")
+        
+        # Check hashed OTP
+        if not check_password(otp, otp_obj.otp):
+            return self.error_response("Invalid OTP")
+
+        otp_obj.is_verified = True
+        otp_obj.save()
+
+        return self.success_response(message="OTP verified successfully")

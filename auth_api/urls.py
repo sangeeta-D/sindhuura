@@ -22,6 +22,8 @@ urlpatterns = [
     path("blogs/<int:blog_id>/", BlogDetailAPIView.as_view(), name="blog-detail"),
 
     path("update-fcm-token/", UpdateFCMTokenAPIView.as_view()),
+    path("send-otp/", SendOTPAPIView.as_view(),name="send-otp"),
+    path("verify-otp/",VerifyOTPAPIView.as_view(),name="verify-otp")
 
     
 ]

@@ -509,3 +509,12 @@ class FCMTokenSerializer(serializers.ModelSerializer):
         if not value or not value.strip():
             raise serializers.ValidationError("FCM token cannot be empty")
         return value.strip()
+
+
+class SendOTPSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+
+
+class VerifyOTPSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+    otp = serializers.CharField(max_length=6)

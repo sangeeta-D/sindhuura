@@ -94,6 +94,16 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
     
+class PhoneOTP(models.Model):
+    phone_number = models.CharField(max_length=15, db_index=True)
+    otp = models.CharField(max_length=6)
+    is_verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timezone.timedelta(minutes=5)
+
+
 class UserImage(models.Model):
     user = models.ForeignKey(
         CustomUser,
