@@ -16,6 +16,11 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt  # Only if you don't use csrf token in JS
 from django.contrib.admin.views.decorators import staff_member_required
 import json
+from django.shortcuts import render
+from django.db.models import Q
+from match.models import MatchRequest
+from django.db.models import Sum
+from django.utils.timezone import make_aware
 
 def index(request):
     return render(request,'index.html')
@@ -426,6 +431,42 @@ def create_sub_admin(request):
         return redirect("sub_admin")
     
 
+def edit_sub_admin(request, sub_admin_id):
+    sub_admin = get_object_or_404(CustomUser, id=sub_admin_id, role="sub_admin")
+
+    if request.method == "POST":
+        email = request.POST.get("email")
+        name = request.POST.get("name")
+        password = request.POST.get("password")
+        address = request.POST.get("address")
+
+        profile_image = request.FILES.get("profile_image")
+        aadhaar_card = request.FILES.get("aadhaar_card")
+
+        # Check email uniqueness, excluding current user
+        if CustomUser.objects.filter(email=email).exclude(id=sub_admin_id).exists():
+            messages.error(request, "Email already exists")
+            return redirect("sub_admin")
+
+        sub_admin.email = email
+        sub_admin.name = name
+        sub_admin.address = address
+
+        if password:
+            sub_admin.password = make_password(password)
+
+        if profile_image:
+            sub_admin.profile_image = profile_image
+
+        if aadhaar_card:
+            sub_admin.aadhaar_card = aadhaar_card
+
+        sub_admin.save()
+
+        messages.success(request, "Sub Admin updated successfully")
+        return redirect("sub_admin")
+    
+
 def assign_sub_admin_menu(request, sub_admin_id):
     sub_admin = get_object_or_404(CustomUser, id=sub_admin_id, role="sub_admin")
 
@@ -605,61 +646,131 @@ def success_story(request):
     )
     return render(request, 'success_story.html', {'stories': stories})
 
+def revenue(request):
+    selected_month = request.GET.get("month")
+    from_date = request.GET.get("from_date")
+    to_date = request.GET.get("to_date")
 
-def chat_views(request):
+    payments = (
+        SubscriptionPayment.objects
+        .select_related("user", "subscription")
+        .all()
+    )
+
+    # Month filter
+    if selected_month:
+        year, month = selected_month.split("-")
+        payments = payments.filter(
+            created_at__year=year,
+            created_at__month=month
+        )
+
+    # From - To date filter
+    if from_date:
+        from_dt = make_aware(datetime.strptime(from_date, "%Y-%m-%d"))
+        payments = payments.filter(created_at__gte=from_dt)
+
+    if to_date:
+        to_dt = make_aware(datetime.strptime(to_date, "%Y-%m-%d"))
+        payments = payments.filter(created_at__lte=to_dt)
+
+    # Statistics
+    total_revenue = payments.filter(
+        payment_status="success"
+    ).aggregate(total=Sum("amount"))["total"] or 0
+
+    success_count = payments.filter(payment_status="success").count()
+    failed_count = payments.filter(payment_status="failed").count()
+    refunded_count = payments.filter(payment_status="refunded").count()
+
+    context = {
+        "payments": payments,
+        "total_revenue": total_revenue,
+        "success_count": success_count,
+        "failed_count": failed_count,
+        "refunded_count": refunded_count,
+        "selected_month": selected_month,
+        "from_date": from_date,
+        "to_date": to_date,
+    }
+
+    return render(request, "revenue.html", context)
+
+
+def match_requests_list(request):
+    match_requests = (
+        MatchRequest.objects
+        .select_related("from_user", "to_user")
+        .all()
+        .order_by("-created_at")
+    )
+
+    # Stats
+    stats = (
+        MatchRequest.objects
+        .values("status")
+        .annotate(count=Count("id"))
+    )
+
+    stats_map = {
+        "total": match_requests.count(),
+        "accepted": 0,
+        "rejected": 0,
+        "pending": 0,
+        "cancelled": 0,
+    }
+
+    for item in stats:
+        stats_map[item["status"]] = item["count"]
+
+    context = {
+        "match_requests": match_requests,
+        "stats": stats_map,
+    }
+
+    return render(request, "match_requests.html", context)
+
+
+def report_reasons(request):
     if request.method == "POST":
         action = request.POST.get("action")
 
-        # ADD QUESTION
-        if action == "add_question":
-            PredefinedMessage.objects.create(
-                text=request.POST.get("question"),
-                order=request.POST.get("question_order")
-            )
-            messages.success(request, "Question added successfully")
+        # ADD / EDIT
+        if action in ["add", "edit"]:
+            reason_id = request.POST.get("reason_id")
 
-        # EDIT QUESTION
-        elif action == "edit_question":
-            q = get_object_or_404(PredefinedMessage, id=request.POST.get("question_id"))
-            q.text = request.POST.get("question")
-            q.order = request.POST.get("question_order")
-            q.save()
-            messages.success(request, "Question updated successfully")
+            title = request.POST.get("title")
+            description = request.POST.get("description")
+            is_active = request.POST.get("is_active") == "on"
 
-        # DELETE QUESTION
-        elif action == "delete_question":
-            get_object_or_404(
-                PredefinedMessage,
-                id=request.POST.get("question_id")
-            ).delete()
-            messages.success(request, "Question deleted successfully")
+            if action == "add":
+                ReportReason.objects.create(
+                    title=title,
+                    description=description,
+                    is_active=is_active
+                )
+                messages.success(request, "Report reason added successfully")
 
-        # ADD ANSWER
-        elif action == "add_answer":
-            PredefinedAnswer.objects.create(
-                message_id=request.POST.get("question_id"),
-                text=request.POST.get("answer"),
-                order=request.POST.get("answer_order")
-            )
-            messages.success(request, "Answer added successfully")
+            else:
+                reason = get_object_or_404(ReportReason, id=reason_id)
+                reason.title = title
+                reason.description = description
+                reason.is_active = is_active
+                reason.save()
+                messages.success(request, "Report reason updated successfully")
 
-        # EDIT ANSWER
-        elif action == "edit_answer":
-            a = get_object_or_404(PredefinedAnswer, id=request.POST.get("answer_id"))
-            a.text = request.POST.get("answer")
-            a.order = request.POST.get("answer_order")
-            a.save()
-            messages.success(request, "Answer updated successfully")
+            return redirect("report_reasons")
 
-        # DELETE ANSWER
-        elif action == "delete_answer":
-            get_object_or_404(
-                PredefinedAnswer,
-                id=request.POST.get("answer_id")
-            ).delete()
-            messages.success(request, "Answer deleted successfully")
+        # DELETE
+        if action == "delete":
+            reason_id = request.POST.get("reason_id")
+            reason = get_object_or_404(ReportReason, id=reason_id)
+            reason.delete()
+            messages.success(request, "Report reason deleted")
+            return redirect("report_reasons")
 
-        return redirect("chat")
+    reasons = ReportReason.objects.all().order_by("-created_at")
 
-    questions = PredefinedMessage.objects.prefetch_related("answers")
-    return render(request, "chat.html", {"questions": questions})
+    return render(request, "report_reasons.html", {
+        "reasons": reasons
+    })

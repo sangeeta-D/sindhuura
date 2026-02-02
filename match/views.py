@@ -645,3 +645,52 @@ class GetEventsAPIView(APIResponseMixin, APIView):
             message="Events fetched successfully",
             data=serializer.data
         )
+
+
+class ReportReasonListAPIView(APIView, APIResponseMixin):
+    """
+    GET: Fetch active report reasons
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        reasons = ReportReason.objects.filter(is_active=True)
+        serializer = ReportReasonSerializer(reasons, many=True)
+
+        return self.success_response(
+            message="Report reasons fetched successfully",
+            data=serializer.data
+        )
+
+
+class UserReportCreateAPIView(APIView, APIResponseMixin):
+    """
+    POST: Report a user
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = UserReportCreateSerializer(
+            data=request.data,
+            context={"request": request}
+        )
+
+        if not serializer.is_valid():
+            return self.error_response(serializer.errors)
+
+        try:
+            report = serializer.save()
+        except Exception as e:
+            return self.error_response(
+                str(e),
+                status_code=drf_status.HTTP_400_BAD_REQUEST
+            )
+
+        return self.success_response(
+            message="User reported successfully",
+            data={
+                "report_id": report.id,
+                "status": report.status
+            },
+            status_code=drf_status.HTTP_201_CREATED
+        )

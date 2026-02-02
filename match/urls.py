@@ -19,4 +19,7 @@ urlpatterns = [
     path('events/', GetEventsAPIView.as_view(), name='api_events'),
     path('reveal-contact/<int:user_id>/', RevealUserFullDetailAPIView.as_view(), name='reveal-contact'),
 
+    path("report-reasons/", ReportReasonListAPIView.as_view()),
+    path("report-user/", UserReportCreateAPIView.as_view()),
+
 ]

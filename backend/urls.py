@@ -2,8 +2,8 @@ from django.urls import path
 from .import views
 
 urlpatterns = [
-    path('',views.index,name='index'),
-    path('admin-login/',views.admin_login,name='admin_login'),
+    path('',views.admin_login,name='admin_login'),
+    # path('admin-login/',views.admin_login,name='admin_login'),
     path('admin-dashboard/',views.admin_dashboard,name='admin_dashboard'),
     path('logout/',views.logout_view,name='logout'),
     path('castes/',views.castes,name='castes'),
@@ -17,6 +17,7 @@ urlpatterns = [
 
     path("sub-admin/", views.sub_admin, name="sub_admin"),
     path("sub-admins/create/", views.create_sub_admin, name="create_sub_admin"),
+    path("sub-admins/edit/<int:sub_admin_id>/", views.edit_sub_admin, name="edit_sub_admin"),
     path("sub-admins/delete/<int:id>/", views.delete_sub_admin, name="delete_sub_admin"),
     path("sub-admins/assign-menu/<int:sub_admin_id>/", views.assign_sub_admin_menu, name="assign_sub_admin_menu"),
 
@@ -25,8 +26,10 @@ urlpatterns = [
     path("blogs/", views.blogs, name="blogs"),
     path('events/',views.events,name="events"),
     path('success-stories/',views.success_story,name="success_stories"),
-    path('chat/',views.chat_views,name="chat"),
+    path('revenue/',views.revenue,name="revenue"),
 
     path('users/<int:user_id>/toggle-verified/', views.toggle_user_verified, name='toggle_user_verified'),
+    path("match-requests/",views.match_requests_list,name="match-request"),
+    path("report_reasons/", views.report_reasons, name="report_reasons"),
 
 ]

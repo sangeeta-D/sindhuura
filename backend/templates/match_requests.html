@@ -1,0 +1,201 @@
+{% extends "admin_base.html" %}
+{% load tz %}
+{% block content %}
+
+<style>
+  .nowrap {
+    white-space: nowrap;
+  }
+  .truncate {
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>
+
+<div class="content-wrapper">
+  <div class="container-xxl container-p-y">
+
+    <h4 class="mb-4">💑 Match Requests</h4>
+
+    <!-- ===================== STATS ===================== -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card text-center shadow-sm">
+          <div class="card-body">
+            <h6>Total Requests</h6>
+            <h3>{{ stats.total }}</h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card text-center shadow-sm border-success">
+          <div class="card-body">
+            <h6 class="text-success">Accepted</h6>
+            <h3>{{ stats.accepted }}</h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card text-center shadow-sm border-danger">
+          <div class="card-body">
+            <h6 class="text-danger">Rejected</h6>
+            <h3>{{ stats.rejected }}</h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card text-center shadow-sm border-warning">
+          <div class="card-body">
+            <h6 class="text-warning">Pending</h6>
+            <h3>{{ stats.pending }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== SEARCH ===================== -->
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <input
+          type="text"
+          id="searchInput"
+          class="form-control"
+          placeholder="Search by email / user id / name"
+        >
+      </div>
+    </div>
+
+    <!-- ===================== TABLE ===================== -->
+    <div class="card">
+      <div class="card-body table-responsive">
+        <table class="table table-bordered table-hover align-middle text-nowrap"
+               id="matchTable">
+          <thead class="table-light">
+            <tr>
+              <th>From User</th>
+              <th>From ID</th>
+              <th>To User</th>
+              <th>To ID</th>
+              <th>Status</th>
+              <th>Requested At (IST)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for match in match_requests %}
+            <tr>
+              <td class="truncate" title="{{ match.from_user.email }}">
+                {{ match.from_user.email }}
+              </td>
+              <td class="nowrap">
+                {{ match.from_user.unique_id }}
+              </td>
+
+              <td class="truncate" title="{{ match.to_user.email }}">
+                {{ match.to_user.email }}
+              </td>
+              <td class="nowrap">
+                {{ match.to_user.unique_id }}
+              </td>
+
+              <td class="nowrap">
+                <span class="badge
+                  {% if match.status == 'accepted' %} bg-success
+                  {% elif match.status == 'rejected' %} bg-danger
+                  {% elif match.status == 'cancelled' %} bg-warning
+                  {% else %} bg-secondary {% endif %}">
+                  {{ match.status|title }}
+                </span>
+              </td>
+
+              <td class="nowrap">
+                {{ match.created_at|localtime|date:"d M Y, h:i A" }}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center">
+                No match requests found
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===================== PAGINATION ===================== -->
+    <div class="d-flex justify-content-between align-items-center mt-3">
+      <div id="pageInfo"></div>
+      <div>
+        <button class="btn btn-sm btn-secondary" id="prevPage">Prev</button>
+        <button class="btn btn-sm btn-secondary" id="nextPage">Next</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== JS SEARCH + PAGINATION ===================== -->
+<script>
+  const rowsPerPage = 20;
+  const table = document.getElementById("matchTable");
+  const tbody = table.querySelector("tbody");
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+
+  let filteredRows = [...rows];
+  let currentPage = 1;
+
+  function renderTable() {
+    const totalPages = Math.ceil(filteredRows.length / rowsPerPage) || 1;
+
+    rows.forEach(row => row.style.display = "none");
+
+    filteredRows.forEach((row, index) => {
+      if (
+        index >= (currentPage - 1) * rowsPerPage &&
+        index < currentPage * rowsPerPage
+      ) {
+        row.style.display = "";
+      }
+    });
+
+    document.getElementById("pageInfo").innerText =
+      `Page ${currentPage} of ${totalPages}`;
+  }
+
+  document.getElementById("prevPage").onclick = () => {
+    if (currentPage > 1) {
+      currentPage--;
+      renderTable();
+    }
+  };
+
+  document.getElementById("nextPage").onclick = () => {
+    const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+    if (currentPage < totalPages) {
+      currentPage++;
+      renderTable();
+    }
+  };
+
+  // 🔍 Client-side search
+  document.getElementById("searchInput").addEventListener("keyup", function () {
+    const value = this.value.toLowerCase().trim();
+
+    filteredRows = rows.filter(row =>
+      row.textContent.toLowerCase().includes(value)
+    );
+
+    currentPage = 1;
+    renderTable();
+  });
+
+  renderTable();
+</script>
+
+{% endblock %}

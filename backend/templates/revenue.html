@@ -1,0 +1,199 @@
+{% extends 'admin_base.html' %}
+{% load tz %}
+{% block content %}
+
+<style>
+  .nowrap {
+    white-space: nowrap;
+  }
+  .truncate {
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>
+
+<div class="content-wrapper">
+  <div class="container-xxl flex-grow-1 container-p-y">
+
+    <h4 class="mb-4">💰 Revenue Dashboard</h4>
+
+    <!-- Filters -->
+    <form method="get" class="mb-4">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label">Month</label>
+          <input type="month"
+                 name="month"
+                 value="{{ selected_month }}"
+                 class="form-control">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">From Date</label>
+          <input type="date"
+                 name="from_date"
+                 value="{{ from_date }}"
+                 class="form-control">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">To Date</label>
+          <input type="date"
+                 name="to_date"
+                 value="{{ to_date }}"
+                 class="form-control">
+        </div>
+
+        <div class="col-md-2">
+          <button class="btn btn-primary w-100">Apply</button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h6>Total Revenue</h6>
+            <h4 class="text-success">₹ {{ total_revenue }}</h4>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h6>Successful</h6>
+            <h4>{{ success_count }}</h4>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h6>Failed</h6>
+            <h4 class="text-danger">{{ failed_count }}</h4>
+          </div>
+        </div>
+      </div>
+
+      
+    </div>
+
+    <!-- Payments Table -->
+    <div class="card">
+      <div class="card-body table-responsive">
+        <table class="table table-bordered table-hover align-middle text-nowrap"
+               id="paymentsTable">
+
+          <thead class="table-light">
+            <tr>
+              <th>User ID</th>
+              <th>Email</th>
+              <th>Plan</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Method</th>
+              <th>Transaction ID</th>
+              <th>Date (IST)</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for payment in payments %}
+            <tr>
+              <td class="nowrap">{{ payment.user.unique_id }}</td>
+              <td class="truncate" title="{{ payment.user.email }}">
+                {{ payment.user.email }}
+              </td>
+              <td class="nowrap">{{ payment.subscription.plan_name }}</td>
+              <td class="nowrap">₹ {{ payment.amount }}</td>
+              <td class="nowrap">
+                <span class="badge
+                  {% if payment.payment_status == 'success' %} bg-success
+                  {% elif payment.payment_status == 'failed' %} bg-danger
+                  {% elif payment.payment_status == 'refunded' %} bg-warning
+                  {% else %} bg-secondary {% endif %}">
+                  {{ payment.payment_status|title }}
+                </span>
+              </td>
+              <td class="nowrap">{{ payment.payment_method }}</td>
+              <td class="truncate" title="{{ payment.transaction_id }}">
+                {{ payment.transaction_id }}
+              </td>
+              <td class="nowrap">
+                {{ payment.created_at|localtime|date:"d M Y, h:i A" }}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="8" class="text-center">No payments found</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+
+        </table>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="d-flex justify-content-between align-items-center mt-3">
+      <div>
+        <span id="pageInfo"></span>
+      </div>
+      <div>
+        <button class="btn btn-sm btn-secondary" id="prevPage">Prev</button>
+        <button class="btn btn-sm btn-secondary" id="nextPage">Next</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- JS Pagination -->
+<script>
+  const rowsPerPage = 20;
+  const table = document.getElementById("paymentsTable");
+  const tbody = table.querySelector("tbody");
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+
+  let currentPage = 1;
+  const totalPages = Math.ceil(rows.length / rowsPerPage);
+
+  function renderTable() {
+    rows.forEach((row, index) => {
+      row.style.display =
+        index >= (currentPage - 1) * rowsPerPage &&
+        index < currentPage * rowsPerPage
+          ? ""
+          : "none";
+    });
+
+    document.getElementById("pageInfo").innerText =
+      rows.length
+        ? `Page ${currentPage} of ${totalPages}`
+        : "";
+  }
+
+  document.getElementById("prevPage").onclick = () => {
+    if (currentPage > 1) {
+      currentPage--;
+      renderTable();
+    }
+  };
+
+  document.getElementById("nextPage").onclick = () => {
+    if (currentPage < totalPages) {
+      currentPage++;
+      renderTable();
+    }
+  };
+
+  renderTable();
+</script>
+
+{% endblock %}

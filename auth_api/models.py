@@ -4,6 +4,9 @@ from django.utils import timezone
 from backend.models import Caste, MusicGenre, MusicActivity, ReadingPreference, MovieGenre
 from backend.models import SubscriptionPlan
 import uuid
+import random
+import re
+from django.db.models import Max
 # Create your models here.
 
 class CustomUserManager(BaseUserManager):
@@ -87,9 +90,38 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
             self.unique_id = self.generate_unique_id()
         super().save(*args, **kwargs)
 
-    @staticmethod
-    def generate_unique_id():
-        return f"USR-{uuid.uuid4().hex[:8].upper()}"
+    def generate_unique_id(self):
+        # --- 1️⃣ Get first 3 letters of name ---
+        if self.name:
+            name_part = re.sub(r'[^A-Za-z]', '', self.name).upper()[:3]
+        else:
+            name_part = "USR"
+
+        name_part = name_part.ljust(3, "X")  # Ensure 3 letters
+
+        # --- 2️⃣ Get 5 random digits from phone number ---
+        if self.phone_number:
+            digits = re.sub(r'\D', '', self.phone_number)
+            phone_part = ''.join(random.sample(digits, min(5, len(digits))))
+            phone_part = phone_part.ljust(5, "0")
+        else:
+            phone_part = ''.join(random.choices("0123456789", k=5))
+
+        # --- 3️⃣ Serial number (001, 002...) ---
+        last_user = (
+            CustomUser.objects
+            .filter(unique_id__startswith=f"USR-{name_part}-")
+            .aggregate(max_id=Max("unique_id"))
+        )
+
+        if last_user["max_id"]:
+            last_serial = int(last_user["max_id"].split("-")[-1])
+            serial = f"{last_serial + 1:03d}"
+        else:
+            serial = "001"
+
+        return f"USR-{name_part}-{phone_part}-{serial}"
+
 
     def __str__(self):
         return self.email

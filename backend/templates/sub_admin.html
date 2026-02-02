@@ -79,9 +79,11 @@
 
     <ul class="dropdown-menu dropdown-menu-end">
       <li>
-        <a class="dropdown-item" href="#">
+        <button class="dropdown-item"
+                data-bs-toggle="modal"
+                data-bs-target="#editSubAdminModal{{ admin.id }}">
           <i class="bi bi-pencil"></i> Edit
-        </a>
+        </button>
       </li>
 
       <li>
@@ -185,6 +187,80 @@
     </form>
   </div>
 </div>
+
+<!-- EDIT SUB ADMIN MODALS -->
+{% for admin in sub_admins %}
+<div class="modal fade" id="editSubAdminModal{{ admin.id }}" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form method="POST"
+          action="{% url 'edit_sub_admin' admin.id %}"
+          enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Sub Admin</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label>Name</label>
+              <input type="text" name="name" class="form-control" value="{{ admin.name }}" required>
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label>Email</label>
+              <input type="email" name="email" class="form-control" value="{{ admin.email }}" required>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label>Password (Leave blank to keep current)</label>
+              <input type="password" name="password" class="form-control">
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label>Profile Image (Optional)</label>
+              <input type="file" name="profile_image" class="form-control" accept="image/*">
+              {% if admin.profile_image %}
+                <small class="text-muted">Current: <a href="{{ admin.profile_image.url }}" target="_blank">View</a></small>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label>Aadhaar Card (PDF / Image)</label>
+            <input type="file" name="aadhaar_card" class="form-control" accept=".pdf,image/*">
+            {% if admin.aadhaar_card %}
+              <small class="text-muted">Current: <a href="{{ admin.aadhaar_card.url }}" target="_blank">View</a></small>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label>Address</label>
+            <textarea name="address" class="form-control" rows="3">{{ admin.address }}</textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Update Sub Admin
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+</div>
+{% endfor %}
 
 <!-- assigne menu modal -->
  {% for admin in sub_admins %}

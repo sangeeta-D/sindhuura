@@ -751,3 +751,5 @@ class VerifyOTPAPIView(APIView, APIResponseMixin):
         otp_obj.save()
 
         return self.success_response(message="OTP verified successfully")
+    
+

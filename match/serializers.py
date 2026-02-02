@@ -7,7 +7,7 @@ from auth_api.models import CustomUser
 from .models import *
 from sindhuura.datetime_utils import to_ist
 from django.utils import timezone
-
+from backend.models import ReportReason, UserReport
 
 class CasteSerializer(serializers.ModelSerializer):
     class Meta:
@@ -379,3 +379,54 @@ class EventSerializer(serializers.ModelSerializer):
         if obj.event_datetime >= now:
             return "upcoming"
         return "completed"
+    
+
+class ReportReasonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReportReason
+        fields = ["id", "title", "description"]
+
+
+class UserReportCreateSerializer(serializers.ModelSerializer):
+    reported_user_id = serializers.IntegerField(write_only=True)
+    reason_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        model = UserReport
+        fields = [
+            "reported_user_id",
+            "reason_id",
+            "description",
+        ]
+
+    def validate(self, attrs):
+        request = self.context["request"]
+        reported_by = request.user
+
+        if not reported_by.is_authenticated:
+            raise serializers.ValidationError("Authentication required")
+
+        # Prevent self-report
+        if reported_by.id == attrs["reported_user_id"]:
+            raise serializers.ValidationError("You cannot report yourself")
+
+        return attrs
+
+    def create(self, validated_data):
+        request = self.context["request"]
+
+        reported_by = request.user
+        reported_user = CustomUser.objects.get(
+            id=validated_data["reported_user_id"]
+        )
+        reason = ReportReason.objects.get(
+            id=validated_data["reason_id"],
+            is_active=True
+        )
+
+        return UserReport.objects.create(
+            reported_by=reported_by,
+            reported_user=reported_user,
+            reason=reason,
+            description=validated_data.get("description", "")
+        )

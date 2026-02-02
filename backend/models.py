@@ -215,3 +215,85 @@ class Event(models.Model):
 
     def __str__(self):
         return self.event_name
+    
+
+class ReportReason(models.Model):
+    title = models.CharField(
+        max_length=100,
+        unique=True
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Explain what this report reason means"
+    )
+    is_active = models.BooleanField(
+        default=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["title"]
+        verbose_name = "Report Reason"
+        verbose_name_plural = "Report Reasons"
+
+    def __str__(self):
+        return self.title
+
+
+class UserReport(models.Model):
+
+    STATUS_CHOICES = (
+        ("pending", "Pending"),
+        ("reviewed", "Reviewed"),
+        ("action_taken", "Action Taken"),
+        ("rejected", "Rejected"),
+    )
+
+    reported_by = models.ForeignKey(
+        'auth_api.CustomUser',
+        on_delete=models.CASCADE,
+        related_name="reports_made"
+    )
+
+    reported_user = models.ForeignKey(
+        'auth_api.CustomUser',
+        on_delete=models.CASCADE,
+        related_name="reports_received"
+    )
+
+    reason = models.ForeignKey(
+        ReportReason,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    description = models.TextField(
+        blank=True,
+        help_text="Additional details provided by the user"
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "User Report"
+        verbose_name_plural = "User Reports"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["reported_by", "reported_user"],
+                name="unique_user_report"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.reported_by.email} → {self.reported_user.email}"
