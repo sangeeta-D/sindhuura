@@ -160,8 +160,9 @@
     <div class="row">
       <div class="col-lg-6 mb-4">
         <div class="card">
-          <div class="card-header">
+          <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">Recent Users</h5>
+            <a href="{% url 'user_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
           </div>
           <div class="card-body">
             <div class="table-responsive">
@@ -198,8 +199,9 @@
 
       <div class="col-lg-6 mb-4">
         <div class="card">
-          <div class="card-header">
+          <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">Recent Matches</h5>
+            <a href="{% url 'match-request' %}" class="btn btn-sm btn-outline-primary">View All</a>
           </div>
           <div class="card-body">
             <div class="table-responsive">
@@ -235,8 +237,9 @@
     <div class="row">
       <div class="col-12">
         <div class="card">
-          <div class="card-header">
+          <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">Recent Payments</h5>
+            <a href="{% url 'revenue' %}" class="btn btn-sm btn-outline-primary">View All</a>
           </div>
           <div class="card-body">
             <div class="table-responsive">
