@@ -46,8 +46,9 @@
                  class="form-control">
         </div>
 
-        <div class="col-md-2">
-          <button class="btn btn-primary w-100">Apply</button>
+        <div class="col-md-2 d-flex gap-2">
+          <button class="btn btn-primary w-50">Apply</button>
+          <a href="{% url 'revenue' %}" class="btn btn-secondary w-50">Reset</a>
         </div>
       </div>
     </form>
@@ -80,8 +81,6 @@
           </div>
         </div>
       </div>
-
-      
     </div>
 
     <!-- Payments Table -->

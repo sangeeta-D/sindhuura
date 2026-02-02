@@ -16,11 +16,17 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt  # Only if you don't use csrf token in JS
 from django.contrib.admin.views.decorators import staff_member_required
 import json
+from django.shortcuts import render, redirect
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import EmailMultiAlternatives
 from django.shortcuts import render
 from django.db.models import Q
 from match.models import MatchRequest
 from django.db.models import Sum
 from django.utils.timezone import make_aware
+from datetime import datetime, timedelta
 
 def index(request):
     return render(request,'index.html')
@@ -297,11 +303,11 @@ def subscription_plans(request):
         "plans": plans
     })
 
-def registered_user_list(request):
-    users = User.objects.filter(is_staff=False).order_by("-date_joined")
-    return render(request, "registered_user_list.html", {
-        "users": users
-    })
+# def registered_user_list(request):
+#     users = User.objects.filter(is_staff=False).order_by("-date_joined")
+#     return render(request, "registered_user_list.html", {
+#         "users": users
+#     })
 
 
 def user_list(request):
@@ -366,6 +372,44 @@ def toggle_user_verified(request, user_id):
             "status": True,
             "message": f"User verification status updated to {user.is_verified}",
             "response": {"is_verified": user.is_verified}
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "status": False,
+            "message": str(e),
+            "response": []
+        }, status=500)
+
+
+@require_POST
+def toggle_user_active(request, user_id):
+    try:
+        user = CustomUser.objects.get(id=user_id)
+    except CustomUser.DoesNotExist:
+        return JsonResponse({
+            "status": False,
+            "message": "User not found",
+            "response": []
+        }, status=404)
+
+    try:
+        data = json.loads(request.body)
+        is_active = data.get("is_active", None)
+        if is_active is None:
+            return JsonResponse({
+                "status": False,
+                "message": "Missing 'is_active' field",
+                "response": []
+            }, status=400)
+
+        user.is_active = bool(is_active)
+        user.save()
+
+        return JsonResponse({
+            "status": True,
+            "message": f"User active status updated to {user.is_active}",
+            "response": {"is_active": user.is_active}
         })
 
     except Exception as e:
@@ -774,3 +818,82 @@ def report_reasons(request):
     return render(request, "report_reasons.html", {
         "reasons": reasons
     })
+
+
+# forgot password
+def forgot_password(request):
+    if request.method == "POST":
+        email = request.POST.get("email")
+        try:
+            user = CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
+            messages.error(request, "No account found with this email.")
+            return render(request, "forgot_password.html")
+
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        reset_link = request.build_absolute_uri(f"/reset-password/{uid}/{token}/")
+
+        # HTML email content
+        subject = "Sindhuura Password Reset"
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.5;">
+            <h2>Hi {user.name or user.email},</h2>
+            <p>You requested a password reset for your Sindhuura account.</p>
+            <p>
+                Click the button below to reset your password:
+            </p>
+            <p>
+                <a href="{reset_link}" style="padding: 10px 20px; background-color: #007bff; color: #fff; text-decoration: none; border-radius: 5px;">
+                    Reset Password
+                </a>
+            </p>
+            <p>If you did not request this, you can safely ignore this email.</p>
+            <hr>
+            <p style="font-size: 0.85em; color: #555;">Sindhuura Team</p>
+        </body>
+        </html>
+        """
+
+        email_message = EmailMultiAlternatives(
+            subject=subject,
+            body="Please use an HTML-compatible email client!",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        email_message.attach_alternative(html_content, "text/html")
+        email_message.send(fail_silently=False)
+
+        messages.success(request, "Password reset link sent to your email.")
+        return redirect("forgot_password")
+
+    return render(request, "forgot_password.html")
+
+
+# ----- Reset Password -----
+def reset_password(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = CustomUser.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
+        user = None
+
+    if user is None or not default_token_generator.check_token(user, token):
+        messages.error(request, "The reset link is invalid or expired.")
+        return redirect("forgot_password")
+
+    if request.method == "POST":
+        password = request.POST.get("password")
+        password2 = request.POST.get("password2")
+
+        if not password or password != password2:
+            messages.error(request, "Passwords do not match or are empty.")
+            return render(request, "reset_password.html")
+
+        user.password = make_password(password)
+        user.save()
+        messages.success(request, "Password has been reset successfully!")
+        return redirect("admin_login")
+
+    return render(request, "reset_password.html")

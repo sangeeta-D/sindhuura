@@ -29,7 +29,11 @@ urlpatterns = [
     path('revenue/',views.revenue,name="revenue"),
 
     path('users/<int:user_id>/toggle-verified/', views.toggle_user_verified, name='toggle_user_verified'),
+    path('users/<int:user_id>/toggle-active/', views.toggle_user_active, name='toggle_user_active'),
     path("match-requests/",views.match_requests_list,name="match-request"),
     path("report_reasons/", views.report_reasons, name="report_reasons"),
+
+    path('forgot-password/', views.forgot_password, name='forgot_password'),
+    path('reset-password/<uidb64>/<token>/', views.reset_password, name='reset_password'),
 
 ]

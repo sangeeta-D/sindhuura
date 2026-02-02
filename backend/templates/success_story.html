@@ -4,55 +4,42 @@
 <div class="content-wrapper">
   <div class="container-xxl flex-grow-1 container-p-y">
 
-    <h4 class="fw-bold mb-4">Success Stories</h4>
+    <h4 class="fw-bold mb-4">💖 Success Stories</h4>
 
-    <div class="card">
-      <div class="card-body table-responsive">
-        <table class="table table-hover align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>#</th>
-              <th>Couple</th>
-              <th>Wedding Date</th>
-              <th>Venue</th>
-              <th>Added By</th>
-              <th>Created</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for story in stories %}
-            <tr class="story-row"
-                data-bs-toggle="modal"
-                data-bs-target="#storyModal"
-                data-couple="{{ story.couple_name }}"
-                data-date="{{ story.wedding_date }}"
-                data-venue="{{ story.venue }}"
-                data-addedby="{{ story.created_by.name|default:story.created_by.email|default:'Admin' }}"
-                data-description="{{ story.description|escapejs }}"
-                data-images='[
-                  {% for img in story.images.all %}
-                    "{{ img.image.url }}"{% if not forloop.last %},{% endif %}
-                  {% endfor %}
-                ]'>
-              <td>{{ forloop.counter }}</td>
-              <td><strong>{{ story.couple_name }}</strong></td>
-              <td>{{ story.wedding_date }}</td>
-              <td>{{ story.venue }}</td>
-              <td>
-                {{ story.created_by.name|default:story.created_by.email|default:"Admin" }}
-              </td>
-              <td>{{ story.created_at|date:"d M Y" }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="6" class="text-center text-muted">
-                No success stories found
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="row g-4">
+
+      {% for story in stories %}
+      <div class="col-md-4">
+        <div class="card h-100 shadow-sm story-card" 
+             data-bs-toggle="modal"
+             data-bs-target="#storyModal"
+             data-couple="{{ story.couple_name }}"
+             data-date="{{ story.wedding_date }}"
+             data-venue="{{ story.venue }}"
+             data-addedby="{{ story.created_by.name|default:story.created_by.email|default:'Admin' }}"
+             data-description="{{ story.description|escapejs }}"
+             data-images='[ {% for img in story.images.all %}"{{ img.image.url }}"{% if not forloop.last %},{% endif %}{% endfor %} ]'>
+          {% if story.images.first %}
+          <img src="{{ story.images.first.image.url }}" class="card-img-top" style="height:200px; object-fit:cover;">
+          {% else %}
+          <div class="bg-secondary d-flex align-items-center justify-content-center" style="height:200px; color:#fff; font-size:1.5rem;">
+            No Image
+          </div>
+          {% endif %}
+          <div class="card-body">
+            <h5 class="card-title">{{ story.couple_name }}</h5>
+            <p class="card-text mb-1"><strong>Wedding Date:</strong> {{ story.wedding_date }}</p>
+            <p class="card-text mb-1"><strong>Venue:</strong> {{ story.venue|truncatechars:25 }}</p>
+            <p class="text-muted mb-0"><small>Added by {{ story.created_by.name|default:story.created_by.email|default:"Admin" }}</small></p>
+          </div>
+        </div>
       </div>
+      {% empty %}
+      <div class="col-12 text-center text-muted">
+        No success stories found
+      </div>
+      {% endfor %}
+
     </div>
 
   </div>
@@ -124,9 +111,8 @@
 
 <!-- ================= SCRIPTS ================= -->
 <script>
-document.querySelectorAll(".story-row").forEach(row => {
-  row.addEventListener("click", function () {
-
+document.querySelectorAll(".story-card").forEach(card => {
+  card.addEventListener("click", function () {
     document.getElementById("modalCouple").innerText = this.dataset.couple;
     document.getElementById("modalDate").innerText = this.dataset.date;
     document.getElementById("modalVenue").innerText = this.dataset.venue;
@@ -155,19 +141,21 @@ function openImagePreview(imageUrl) {
 }
 </script>
 
-<!-- ================= STYLES ================= -->
 <style>
-.table-hover tbody tr {
+.story-card {
   cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
-
+.story-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
 .carousel-img {
   height: 350px;
   object-fit: cover;
   border-radius: 10px;
   cursor: zoom-in;
 }
-
 .preview-img {
   max-height: 90vh;
   object-fit: contain;
