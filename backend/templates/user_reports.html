@@ -25,6 +25,7 @@
                 <th>Description</th>
                 <th>Status</th>
                 <th>Reported At</th>
+                <th>Action</th>
               </tr>
             </thead>
 
@@ -37,28 +38,20 @@
                   <div class="fw-semibold">
                     {{ report.reported_by.name|default:"—" }}
                   </div>
-                  <small class="text-muted">
-                    {{ report.reported_by.email }}
-                  </small>
+                  <small class="text-muted">{{ report.reported_by.email }}</small>
                 </td>
 
                 <td>
                   <div class="fw-semibold">
                     {{ report.reported_user.name|default:"—" }}
                   </div>
-                  <small class="text-muted">
-                    {{ report.reported_user.email }}
-                  </small>
+                  <small class="text-muted">{{ report.reported_user.email }}</small>
                 </td>
 
-                <td>
-                  {{ report.reason.title|default:"—" }}
-                </td>
+                <td>{{ report.reason.title|default:"—" }}</td>
 
                 <td style="max-width: 250px;">
-                  <small class="text-muted">
-                    {{ report.description|default:"No description" }}
-                  </small>
+                  <small class="text-muted">{{ report.description|default:"No description" }}</small>
                 </td>
 
                 <td>
@@ -73,15 +66,26 @@
                   {% endif %}
                 </td>
 
+                <td>{{ report.created_at|date:"M d, Y H:i" }}</td>
+
+                <!-- Status Change Form -->
                 <td>
-                  {{ report.created_at|date:"M d, Y H:i" }}
+                  <form method="POST" class="d-flex align-items-center">
+                    {% csrf_token %}
+                    <input type="hidden" name="report_id" value="{{ report.id }}">
+                    <select name="status" class="form-select form-select-sm me-2">
+                      <option value="pending" {% if report.status == "pending" %}selected{% endif %}>Pending</option>
+                      <option value="reviewed" {% if report.status == "reviewed" %}selected{% endif %}>Reviewed</option>
+                      <option value="action_taken" {% if report.status == "action_taken" %}selected{% endif %}>Action Taken</option>
+                      <option value="rejected" {% if report.status == "rejected" %}selected{% endif %}>Rejected</option>
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                  </form>
                 </td>
               </tr>
               {% empty %}
               <tr>
-                <td colspan="7" class="text-center text-muted">
-                  No user reports found
-                </td>
+                <td colspan="8" class="text-center text-muted">No user reports found</td>
               </tr>
               {% endfor %}
             </tbody>

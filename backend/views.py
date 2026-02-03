@@ -896,8 +896,17 @@ def reset_password(request, uidb64, token):
 
     return render(request, "reset_password.html")
 
-
 def user_reports(request):
+    if request.method == "POST":
+        report_id = request.POST.get("report_id")
+        new_status = request.POST.get("status")
+        report = get_object_or_404(UserReport, id=report_id)
+
+        report.status = new_status
+        report.save()
+        messages.success(request, f"Report status updated to {new_status.replace('_', ' ').title()}")
+        return redirect("user_reports")  # reload page to reflect change
+
     reports = UserReport.objects.select_related(
         "reported_by", "reported_user", "reason"
     )
