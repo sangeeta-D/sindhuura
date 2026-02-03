@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html
   lang="en"
   class="light-style customizer-hide"
@@ -16,7 +15,6 @@
     />
 
     <title>Sindhuura - Admin Login</title>
-
     <meta name="description" content="" />
 
     <!-- Favicon -->
@@ -30,7 +28,7 @@
       rel="stylesheet"
     />
 
-    <!-- Icons. Uncomment required icon fonts -->
+    <!-- Icons -->
     <link rel="stylesheet" href="/static/admin_assets/assets/vendor/fonts/boxicons.css" />
 
     <!-- Core CSS -->
@@ -42,120 +40,122 @@
     <link rel="stylesheet" href="/static/admin_assets/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
 
     <!-- Page CSS -->
-    <!-- Page -->
     <link rel="stylesheet" href="/static/admin_assets/assets/vendor/css/pages/page-auth.css" />
+
+    <!-- Toastify CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css" />
+
     <!-- Helpers -->
     <script src="/static/admin_assets/assets/vendor/js/helpers.js"></script>
-
-    <!--! Template customizer & Theme config files MUST be included after core stylesheets and helpers.js in the <head> section -->
-    <!--? Config:  Mandatory theme config file contain global vars & default theme options, Set your preferred theme option in this file.  -->
     <script src="/static/admin_assets/assets/js/config.js"></script>
   </head>
 
   <body>
-    <!-- Content -->
-
     <div class="container-xxl">
       <div class="authentication-wrapper authentication-basic container-p-y">
         <div class="authentication-inner">
-          <!-- Register -->
           <div class="card">
             <div class="card-body">
               <!-- Logo -->
               <div class="app-brand justify-content-center">
                 <a href="/admin-login/" class="app-brand-link gap-2">
                   <span class="app-brand-logo demo">
-                  <img src="/static/admin_assets/assets/img/logo-1.png" width="90px" height="90px" alt="">
+                    <img src="/static/admin_assets/assets/img/logo-1.png" width="90px" height="90px" alt="">
                   </span>
-                 
                 </a>
               </div>
-              <!-- /Logo -->
               <h4 class="mb-2">Welcome to Sindhuura! 👋</h4>
-             
+
+              <!-- Login Form -->
               <form method="POST" class="mb-3">
-  {% csrf_token %}
+                {% csrf_token %}
 
-  <div class="mb-3">
-    <label for="email" class="form-label">Email or Username</label>
-    <input
-      type="text"
-      class="form-control"
-      id="email"
-      name="email_username"
-      placeholder="Enter your email or username"
-      autofocus
-      required
-    />
-  </div>
+                <div class="mb-3">
+                  <label for="email" class="form-label">Email or Username</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="email"
+                    name="email_username"
+                    placeholder="Enter your email or username"
+                    autofocus
+                    required
+                  />
+                </div>
 
-  <div class="mb-3 form-password-toggle">
-    <div class="d-flex justify-content-between">
-      <label class="form-label" for="password">Password</label>
-      <a href="/forgot-password/">
-        <small>Forgot Password?</small>
-      </a>
-    </div>
-    <div class="input-group input-group-merge">
-      <input
-        type="password"
-        id="password"
-        class="form-control"
-        name="password"
-        required
-      />
-      <span class="input-group-text cursor-pointer">
-        <i class="bx bx-hide"></i>
-      </span>
-    </div>
-  </div>
+                <div class="mb-3 form-password-toggle">
+                  <div class="d-flex justify-content-between">
+                    <label class="form-label" for="password">Password</label>
+                    <a href="/forgot-password/"><small>Forgot Password?</small></a>
+                  </div>
+                  <div class="input-group input-group-merge">
+                    <input
+                      type="password"
+                      id="password"
+                      class="form-control"
+                      name="password"
+                      required
+                    />
+                    <span class="input-group-text cursor-pointer">
+                      <i class="bx bx-hide"></i>
+                    </span>
+                  </div>
+                </div>
 
-  <div class="mb-3">
-    <div class="form-check">
-      <input
-        class="form-check-input"
-        type="checkbox"
-        id="remember-me"
-        name="remember_me"
-      />
-      <label class="form-check-label" for="remember-me">
-        Remember Me
-      </label>
-    </div>
-  </div>
+                <div class="mb-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="remember-me" name="remember_me" />
+                    <label class="form-check-label" for="remember-me">Remember Me</label>
+                  </div>
+                </div>
 
-  <div class="mb-3">
-    <button class="btn btn-primary d-grid w-100" type="submit">
-      Sign in
-    </button>
-  </div>
-</form>
+                <div class="mb-3">
+                  <button class="btn btn-primary d-grid w-100" type="submit">Sign in</button>
+                </div>
+              </form>
             </div>
           </div>
-          <!-- /Register -->
         </div>
       </div>
     </div>
 
-    <!-- / Content -->
     <!-- Core JS -->
-    <!-- build:js assets/vendor/js/core.js -->
     <script src="/static/admin_assets/assets/vendor/libs/jquery/jquery.js"></script>
     <script src="/static/admin_assets/assets/vendor/libs/popper/popper.js"></script>
     <script src="/static/admin_assets/assets/vendor/js/bootstrap.js"></script>
     <script src="/static/admin_assets/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
-
     <script src="/static/admin_assets/assets/vendor/js/menu.js"></script>
-    <!-- endbuild -->
 
-    <!-- Vendors JS -->
+    <!-- Toastify JS -->
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+    <!-- Toastify Messages -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        {% if messages %}
+          {% for message in messages %}
+            Toastify({
+              text: "{{ message|escapejs }}",
+              duration: 4000,
+              close: true,
+              gravity: "top",
+              position: "right",
+              stopOnFocus: true,
+              style: {
+                background:
+                  "{% if message.tags == 'error' %}linear-gradient(to right, #ff5f6d, #ffc371)
+                   {% elif message.tags == 'success' %}linear-gradient(to right, #00b09b, #96c93d)
+                   {% elif message.tags == 'warning' %}linear-gradient(to right, #f7971e, #ffd200)
+                   {% else %}linear-gradient(to right, #2193b0, #6dd5ed)
+                   {% endif %}",
+              },
+            }).showToast();
+          {% endfor %}
+        {% endif %}
+      });
+    </script>
 
     <!-- Main JS -->
     <script src="/static/admin_assets/assets/js/main.js"></script>
-
-    <!-- Page JS -->
-
-    <!-- Place this tag in your head or just before your close body tag. -->
-    <script async defer src="https://buttons.github.io/buttons.js"></script>
   </body>
 </html>

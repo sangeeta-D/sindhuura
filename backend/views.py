@@ -895,3 +895,12 @@ def reset_password(request, uidb64, token):
         return redirect("admin_login")
 
     return render(request, "reset_password.html")
+
+
+def user_reports(request):
+    reports = UserReport.objects.select_related(
+        "reported_by", "reported_user", "reason"
+    )
+    return render(request, "user_reports.html", {
+        "reports": reports
+    })

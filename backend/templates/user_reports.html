@@ -1,0 +1,97 @@
+{% extends 'admin_base.html' %}
+{% block content %}
+
+<div class="content-wrapper">
+  <div class="container-xxl flex-grow-1 container-p-y">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h4 class="fw-bold mb-0">User Reports</h4>
+      <a href="/admin-dashboard/" class="btn btn-outline-secondary btn-sm">
+        ← Back to Dashboard
+      </a>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Reported By</th>
+                <th>Reported User</th>
+                <th>Reason</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Reported At</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for report in reports %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+
+                <td>
+                  <div class="fw-semibold">
+                    {{ report.reported_by.name|default:"—" }}
+                  </div>
+                  <small class="text-muted">
+                    {{ report.reported_by.email }}
+                  </small>
+                </td>
+
+                <td>
+                  <div class="fw-semibold">
+                    {{ report.reported_user.name|default:"—" }}
+                  </div>
+                  <small class="text-muted">
+                    {{ report.reported_user.email }}
+                  </small>
+                </td>
+
+                <td>
+                  {{ report.reason.title|default:"—" }}
+                </td>
+
+                <td style="max-width: 250px;">
+                  <small class="text-muted">
+                    {{ report.description|default:"No description" }}
+                  </small>
+                </td>
+
+                <td>
+                  {% if report.status == "pending" %}
+                    <span class="badge bg-warning">Pending</span>
+                  {% elif report.status == "reviewed" %}
+                    <span class="badge bg-info">Reviewed</span>
+                  {% elif report.status == "action_taken" %}
+                    <span class="badge bg-success">Action Taken</span>
+                  {% else %}
+                    <span class="badge bg-danger">Rejected</span>
+                  {% endif %}
+                </td>
+
+                <td>
+                  {{ report.created_at|date:"M d, Y H:i" }}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="7" class="text-center text-muted">
+                  No user reports found
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
