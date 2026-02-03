@@ -395,8 +395,7 @@ class UserReportCreateSerializer(serializers.ModelSerializer):
         model = UserReport
         fields = [
             "reported_user_id",
-            "reason_id",
-            "description",
+            "reason_id"
         ]
 
     def validate(self, attrs):

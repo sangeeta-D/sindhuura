@@ -222,10 +222,6 @@ class ReportReason(models.Model):
         max_length=100,
         unique=True
     )
-    description = models.TextField(
-        blank=True,
-        help_text="Explain what this report reason means"
-    )
     is_active = models.BooleanField(
         default=True
     )

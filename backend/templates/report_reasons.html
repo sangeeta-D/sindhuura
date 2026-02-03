@@ -18,7 +18,7 @@
           <thead class="table-light">
             <tr>
               <th>Title</th>
-              <th>Description</th>
+              <!-- <th>Description</th> -->
               <th>Status</th>
               <th width="120">Actions</th>
             </tr>
@@ -29,9 +29,9 @@
               <td>
                 <strong>{{ reason.title }}</strong>
               </td>
-              <td>
-                <small class="text-muted">{{ reason.description|truncatechars:100 }}</small>
-              </td>
+              <!-- <td>
+                <small class="text-muted">{{ reason.description|truncatechars:100 }}</small> -->
+              <!-- </td> -->
               <td>
                 {% if reason.is_active %}
                   <span class="badge bg-success">Active</span>
@@ -87,10 +87,10 @@
           <input type="text" name="title" id="titleField" class="form-control" required>
         </div>
 
-        <div class="col-md-12">
+        <!-- <div class="col-md-12">
           <label class="form-label">Description</label>
           <textarea name="description" id="descriptionField" class="form-control" rows="3"></textarea>
-        </div>
+        </div> -->
 
         <div class="col-md-12">
           <div class="form-check">
@@ -120,7 +120,7 @@ function openAddModal() {
   document.getElementById("actionField").value = "add"
   document.getElementById("reasonIdField").value = ""
   document.getElementById("titleField").value = ""
-  document.getElementById("descriptionField").value = ""
+  
   document.getElementById("isActiveField").checked = true
 
   new bootstrap.Modal(document.getElementById("reasonModal")).show()
@@ -131,7 +131,6 @@ function openEditModal(id, title, description, isActive) {
   document.getElementById("actionField").value = "edit"
   document.getElementById("reasonIdField").value = id
   document.getElementById("titleField").value = title
-  document.getElementById("descriptionField").value = description
   document.getElementById("isActiveField").checked = isActive === "True"
 
   new bootstrap.Modal(document.getElementById("reasonModal")).show()

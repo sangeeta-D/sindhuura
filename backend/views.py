@@ -784,13 +784,12 @@ def report_reasons(request):
             reason_id = request.POST.get("reason_id")
 
             title = request.POST.get("title")
-            description = request.POST.get("description")
+          
             is_active = request.POST.get("is_active") == "on"
 
             if action == "add":
                 ReportReason.objects.create(
                     title=title,
-                    description=description,
                     is_active=is_active
                 )
                 messages.success(request, "Report reason added successfully")
@@ -798,7 +797,6 @@ def report_reasons(request):
             else:
                 reason = get_object_or_404(ReportReason, id=reason_id)
                 reason.title = title
-                reason.description = description
                 reason.is_active = is_active
                 reason.save()
                 messages.success(request, "Report reason updated successfully")
