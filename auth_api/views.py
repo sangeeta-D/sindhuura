@@ -100,11 +100,12 @@ class PersonalLifestyleAPIView(APIResponseMixin, APIView):
         )
     
 class LifestyleMasterDataAPIView(APIView, APIResponseMixin):
-    permission_classes = [AllowAny]   # Public API (used during registration)
+    permission_classes = [IsAuthenticated]   # Public API (used during registration)
 
     def get(self, request):
         try:
             data = {
+                "user_id": request.user.unique_id,
                 "music_genres": MusicGenreSerializer(
                     MusicGenre.objects.all(), many=True
                 ).data,
