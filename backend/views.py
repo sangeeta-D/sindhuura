@@ -40,25 +40,29 @@ def admin_login(request):
             return redirect("sub_admin_dashboard")
 
     if request.method == "POST":
-        email = request.POST.get("email_username")
+        email_username = request.POST.get("email_username")
         password = request.POST.get("password")
         remember_me = request.POST.get("remember_me")
-
-        # 🔐 Authenticate using EMAIL
-        user = authenticate(request, email=email, password=password)
-
-        if user is not None:
-            # Only staff users can access admin panel
-            if user.is_staff:
+        
+        try:
+            user = CustomUser.objects.get(email=email_username)
+        except CustomUser.DoesNotExist:
+            messages.error(request, "No account found with this email.")
+            return render(request, "admin_login.html")
+        
+        # Manually check password
+        if user.check_password(password):
+            if not user.is_active:
+                messages.error(request, "Your account is inactive. Please contact admin.")
+            elif not user.is_staff:
+                messages.error(request, "You are not authorized to access the admin panel.")
+            else:
                 login(request, user)
-
-                # Remember Me
                 if remember_me:
                     request.session.set_expiry(60 * 60 * 24 * 14)  # 14 days
                 else:
                     request.session.set_expiry(0)  # browser close
-
-                # ✅ ROLE-BASED REDIRECT
+                
                 if user.role == "admin":
                     return redirect("admin_dashboard")
                 elif user.role == "sub_admin":
@@ -66,11 +70,10 @@ def admin_login(request):
                 else:
                     messages.error(request, "Invalid role access.")
                     logout(request)
-
-            else:
-                messages.error(request, "You are not authorized to access the admin panel.")
         else:
-            messages.error(request, "Invalid email or password.")
+            messages.error(request, "Invalid password.")
+        
+        return render(request, "admin_login.html")
 
     return render(request, "admin_login.html")
 
@@ -309,15 +312,17 @@ def subscription_plans(request):
 #         "users": users
 #     })
 
-
 def user_list(request):
-    users = CustomUser.objects.filter(is_staff=False).select_related("profile").annotate(is_premium=Exists(SubscriptionPayment.objects.filter(user=OuterRef('pk'), payment_status='success')))
+    users = CustomUser.objects.filter(is_staff=False).select_related("profile").annotate(
+        is_premium=Exists(SubscriptionPayment.objects.filter(user=OuterRef('pk'), payment_status='success'))
+    )
 
     # Filters
     gender = request.GET.get('gender')
     city = request.GET.get('city')
     state = request.GET.get('state')
     is_premium = request.GET.get('is_premium')
+    has_profile_image = request.GET.get('has_profile_image')  # New filter
 
     if gender:
         users = users.filter(profile__gender=gender)
@@ -327,6 +332,13 @@ def user_list(request):
         users = users.filter(profile__state__icontains=state)
     if is_premium:
         users = users.filter(is_premium=bool(int(is_premium)))
+    
+    # New: Filter by profile image
+    if has_profile_image:
+        if has_profile_image == '1':  # Has profile image
+            users = users.filter(profile_image__isnull=False)
+        elif has_profile_image == '0':  # No profile image
+            users = users.filter(profile_image__isnull=True)
 
     users = users.order_by("-date_joined")
 
@@ -874,10 +886,13 @@ def reset_password(request, uidb64, token):
     try:
         uid = force_str(urlsafe_base64_decode(uidb64))
         user = CustomUser.objects.get(pk=uid)
+        print(f"DEBUG: User found: {user.email}, ID: {uid}")  # Debug line
     except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
+        print(f"DEBUG: Error finding user: {e}")  # Debug line
         user = None
 
     if user is None or not default_token_generator.check_token(user, token):
+        print(f"DEBUG: Token check failed")
         messages.error(request, "The reset link is invalid or expired.")
         return redirect("forgot_password")
 
@@ -885,13 +900,17 @@ def reset_password(request, uidb64, token):
         password = request.POST.get("password")
         password2 = request.POST.get("password2")
 
-        if not password or password != password2:
-            messages.error(request, "Passwords do not match or are empty.")
+        if not password or not password2:
+            messages.error(request, "Please enter both password fields.")
+            return render(request, "reset_password.html")
+        if password != password2:
+            messages.error(request, "Passwords do not match.")
             return render(request, "reset_password.html")
 
-        user.password = make_password(password)
+        user.set_password(password)
+        user.is_active = True  # Ensure user is active after reset
         user.save()
-        messages.success(request, "Password has been reset successfully!")
+        messages.success(request, "Password has been reset successfully! Please login.")
         return redirect("admin_login")
 
     return render(request, "reset_password.html")

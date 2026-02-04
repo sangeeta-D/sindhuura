@@ -554,6 +554,24 @@ class AddSuccessStoryAPIView(APIResponseMixin, APIView):
         return self.error_response(serializer.errors)
     
 
+class DeleteSuccessStoryAPIView(APIView, APIResponseMixin):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, story_id):
+        # Get story created by logged-in user only
+        success_story = get_object_or_404(
+            SuccessStory,
+            id=story_id,
+            created_by=request.user
+        )
+
+        success_story.delete()
+
+        return self.success_response(
+            message="Success story deleted successfully",
+            status_code=drf_status.HTTP_200_OK
+        )
+
 class SuccessStoryListAPIView(APIResponseMixin, APIView):
     permission_classes = [AllowAny]
 

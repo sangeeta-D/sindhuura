@@ -1,7 +1,15 @@
 {% extends 'admin_base.html' %}
 {% load static %}
 {% block content %}
+<style>
+  .clickable-row {
+    cursor: pointer;
+  }
 
+  .clickable-row:hover {
+    background-color: #f8f9fa;
+  }
+</style>
 <!-- CSRF token for JS -->
 <form id="csrf-form">{% csrf_token %}</form>
 
@@ -14,40 +22,52 @@
     <h4 class="fw-bold mb-4">User List</h4>
 
     <!-- Filters -->
-    <div class="card mb-3">
-      <div class="card-body">
-        <form method="get" class="row g-3">
-          <div class="col-md-3">
-            <label class="form-label">Gender</label>
-            <select name="gender" class="form-select">
-              <option value="">All</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">City</label>
-            <input type="text" name="city" class="form-control" placeholder="Enter city">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">State</label>
-            <input type="text" name="state" class="form-control" placeholder="Enter state">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Premium</label>
-            <select name="is_premium" class="form-select">
-              <option value="">All</option>
-              <option value="1">Premium</option>
-              <option value="0">Non-Premium</option>
-            </select>
-          </div>
-          <div class="col-12">
-            <button type="submit" class="btn btn-primary">Filter</button>
-            <a href="{% url 'user_list' %}" class="btn btn-secondary">Clear</a>
-          </div>
-        </form>
+   <!-- Filters -->
+<div class="card mb-3">
+  <div class="card-body">
+    <form method="get" class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label">Gender</label>
+        <select name="gender" class="form-select">
+          <option value="">All</option>
+          <option value="male" {% if request.GET.gender == 'male' %}selected{% endif %}>Male</option>
+          <option value="female" {% if request.GET.gender == 'female' %}selected{% endif %}>Female</option>
+        </select>
       </div>
-    </div>
+      <div class="col-md-3">
+        <label class="form-label">City</label>
+        <input type="text" name="city" class="form-control" placeholder="Enter city" 
+               value="{{ request.GET.city|default:'' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">State</label>
+        <input type="text" name="state" class="form-control" placeholder="Enter state" 
+               value="{{ request.GET.state|default:'' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Premium</label>
+        <select name="is_premium" class="form-select">
+          <option value="">All</option>
+          <option value="1" {% if request.GET.is_premium == '1' %}selected{% endif %}>Premium</option>
+          <option value="0" {% if request.GET.is_premium == '0' %}selected{% endif %}>Non-Premium</option>
+        </select>
+      </div>
+      <!-- NEW: Profile Image Filter -->
+      <div class="col-md-3">
+        <label class="form-label">Profile Image</label>
+        <select name="has_profile_image" class="form-select">
+          <option value="">All</option>
+          <option value="1" {% if request.GET.has_profile_image == '1' %}selected{% endif %}>With Image</option>
+          <option value="0" {% if request.GET.has_profile_image == '0' %}selected{% endif %}>Without Image</option>
+        </select>
+      </div>
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a href="{% url 'user_list' %}" class="btn btn-secondary">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
 
     <!-- Search -->
     <div class="row mb-3">
@@ -75,7 +95,8 @@
             </thead>
             <tbody>
               {% for user in users %}
-              <tr>
+              <tr class="clickable-row"
+    data-href="{% url 'user_details' user.id %}">
                 <td>{{ forloop.counter }}</td>
                 <!-- User info -->
                 <td>
@@ -116,7 +137,8 @@
                     {% if user.is_active %}Active{% else %}Inactive{% endif %}
                   </span>
                 </td>
-                <td class="text-center">
+                <td class="text-center" onclick="event.stopPropagation();">
+
                   <div class="dropdown">
                     <button class="btn btn-sm btn-icon" type="button" data-bs-toggle="dropdown">
                       <i class="bx bx-dots-vertical-rounded"></i>
@@ -150,6 +172,7 @@
                   </div>
                 </td>
               </tr>
+             
               {% empty %}
               <tr>
                 <td colspan="9" class="text-center text-muted">No users found</td>
@@ -172,42 +195,199 @@
 <script>
 // JS Search + Pagination
 const rowsPerPage = 20;
-const table = document.getElementById("userTable");
-const tbody = table.querySelector("tbody");
-let rows = Array.from(tbody.querySelectorAll("tr"));
-let filteredRows = [...rows];
 let currentPage = 1;
 
-function renderTable() {
-  const totalPages = Math.ceil(filteredRows.length / rowsPerPage) || 1;
-  filteredRows.forEach((row, index) => {
-    row.style.display = index >= (currentPage-1)*rowsPerPage && index < currentPage*rowsPerPage ? "" : "none";
-  });
+// Get all table rows and store their original data
+let rows = [];
+let filteredRows = [];
 
-  // Pagination
+// Initialize rows with their searchable text
+function initializeRows() {
+  const tbody = document.querySelector("#userTable tbody");
+  rows = Array.from(tbody.querySelectorAll("tr:not([style*='display: none'])"))
+    .filter(row => !row.classList.contains('empty-row') && row.cells.length > 1)
+    .map(row => {
+      // Store searchable text in a data attribute
+      const searchText = Array.from(row.querySelectorAll('td'))
+        .map(td => td.innerText.trim())
+        .join(' ')
+        .toLowerCase()
+        .replace(/\s+/g, ' ');
+      
+      row.dataset.searchText = searchText;
+      return row;
+    });
+  
+  filteredRows = [...rows];
+}
+
+// Render table with pagination
+function renderTable() {
+  const tbody = document.querySelector("#userTable tbody");
+  
+  // First, hide all rows
+  rows.forEach(row => row.style.display = 'none');
+  
+  // Show only filtered rows for current page
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const endIndex = startIndex + rowsPerPage;
+  const rowsToShow = filteredRows.slice(startIndex, endIndex);
+  
+  rowsToShow.forEach(row => {
+    row.style.display = '';
+  });
+  
+  renderPagination();
+}
+
+// Render pagination controls
+function renderPagination() {
+  const totalPages = Math.ceil(filteredRows.length / rowsPerPage) || 1;
   const pagination = document.getElementById("pagination");
-  pagination.innerHTML = "";
-  for(let i=1;i<=totalPages;i++){
+  
+  // Ensure current page is valid
+  if (currentPage > totalPages) {
+    currentPage = totalPages || 1;
+  }
+  
+  pagination.innerHTML = '';
+  
+  // Previous button
+  if (totalPages > 1) {
+    const prevLi = document.createElement("li");
+    prevLi.className = "page-item" + (currentPage === 1 ? " disabled" : "");
+    prevLi.innerHTML = `<a class="page-link" href="#" aria-label="Previous">
+      <span aria-hidden="true">&laquo;</span>
+    </a>`;
+    prevLi.onclick = (e) => {
+      e.preventDefault();
+      if (currentPage > 1) {
+        currentPage--;
+        renderTable();
+      }
+    };
+    pagination.appendChild(prevLi);
+  }
+  
+  // Page numbers
+  const maxVisiblePages = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+  
+  if (endPage - startPage + 1 < maxVisiblePages) {
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  }
+  
+  for (let i = startPage; i <= endPage; i++) {
     const li = document.createElement("li");
-    li.className = "page-item" + (i===currentPage?" active":"");
+    li.className = "page-item" + (i === currentPage ? " active" : "");
     li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
-    li.onclick = (e)=>{ e.preventDefault(); currentPage=i; renderTable(); };
+    li.onclick = (e) => {
+      e.preventDefault();
+      currentPage = i;
+      renderTable();
+    };
     pagination.appendChild(li);
+  }
+  
+  // Next button
+  if (totalPages > 1) {
+    const nextLi = document.createElement("li");
+    nextLi.className = "page-item" + (currentPage === totalPages ? " disabled" : "");
+    nextLi.innerHTML = `<a class="page-link" href="#" aria-label="Next">
+      <span aria-hidden="true">&raquo;</span>
+    </a>`;
+    nextLi.onclick = (e) => {
+      e.preventDefault();
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderTable();
+      }
+    };
+    pagination.appendChild(nextLi);
+  }
+  
+  // Update showing text
+  const startCount = filteredRows.length > 0 ? (currentPage - 1) * rowsPerPage + 1 : 0;
+  const endCount = Math.min(currentPage * rowsPerPage, filteredRows.length);
+  
+  // Remove any existing info text
+  const oldInfo = document.getElementById('showing-info');
+  if (oldInfo) oldInfo.remove();
+  
+  // Add showing info
+  const infoDiv = document.createElement('div');
+  infoDiv.id = 'showing-info';
+  infoDiv.className = 'text-muted mt-2';
+  infoDiv.innerHTML = `Showing ${startCount} to ${endCount} of ${filteredRows.length} users`;
+  
+  const tableContainer = document.querySelector('.table-responsive');
+  if (tableContainer && !document.getElementById('showing-info')) {
+    tableContainer.appendChild(infoDiv);
   }
 }
 
-document.getElementById("userSearch").addEventListener("input", function(){
-  const query = this.value.toLowerCase();
-  filteredRows = rows.filter(r => r.innerText.toLowerCase().includes(query));
+// Search function
+document.getElementById("userSearch").addEventListener("input", function() {
+  const query = this.value.toLowerCase().trim();
+  
+  if (query === '') {
+    filteredRows = [...rows];
+  } else {
+    // Split query into words for better search
+    const searchTerms = query.split(/\s+/).filter(term => term.length > 0);
+    
+    filteredRows = rows.filter(row => {
+      const searchText = row.dataset.searchText || '';
+      
+      // Check if ALL search terms are found in the row
+      return searchTerms.every(term => searchText.includes(term));
+    });
+  }
+  
   currentPage = 1;
   renderTable();
 });
 
-renderTable();
+// Initialize when page loads
+document.addEventListener("DOMContentLoaded", function() {
+  // Initialize rows
+  setTimeout(initializeRows, 100); // Small delay to ensure DOM is ready
+  
+  // Make rows clickable
+  document.querySelectorAll(".clickable-row").forEach(row => {
+    row.addEventListener("click", function(e) {
+      // Don't navigate if clicking on dropdown or actions
+      if (!e.target.closest('.dropdown') && !e.target.closest('button')) {
+        window.location.href = this.dataset.href;
+      }
+    });
+  });
+  
+  // Add Enter key support for search
+  document.getElementById("userSearch").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+    }
+  });
+  
+  // Re-initialize rows after any AJAX updates
+  const observer = new MutationObserver(function() {
+    initializeRows();
+    renderTable();
+  });
+  
+  const tbody = document.querySelector("#userTable tbody");
+  if (tbody) {
+    observer.observe(tbody, { childList: true, subtree: true });
+  }
+});
 
 // Toggle Active / Inactive with Toastify
 function toggleUserActive(event, userId, currentStatus) {
   event.preventDefault();
+  event.stopPropagation();
+  
   const newStatus = !currentStatus;
   const actionText = newStatus ? 'activate' : 'deactivate';
 
@@ -232,21 +412,29 @@ function toggleUserActive(event, userId, currentStatus) {
 
     // Update badge
     const badge = document.getElementById(`status-badge-${userId}`);
-    badge.textContent = newStatus ? "Active" : "Inactive";
-    badge.classList.toggle("bg-success", newStatus);
-    badge.classList.toggle("bg-danger", !newStatus);
+    if (badge) {
+      badge.textContent = newStatus ? "Active" : "Inactive";
+      badge.classList.toggle("bg-success", newStatus);
+      badge.classList.toggle("bg-danger", !newStatus);
+    }
 
-    // Update button icon/text
-    const btn = event.target.closest("button");
-    btn.innerHTML = `<i class="bx bx-${newStatus ? "x":"check"} me-2"></i>${newStatus ? "Deactivate":"Activate"}`;
-    btn.setAttribute("onclick", `toggleUserActive(event, ${userId}, ${newStatus})`);
+    // Update button in dropdown
+    const dropdownItem = event.target.closest(".dropdown-item");
+    if (dropdownItem) {
+      dropdownItem.querySelector("i").className = `bx bx-${newStatus ? "x" : "check"} me-2`;
+      dropdownItem.innerHTML = `<i class="bx bx-${newStatus ? "x" : "check"} me-2"></i>${newStatus ? "Deactivate" : "Activate"}`;
+      dropdownItem.setAttribute("onclick", `toggleUserActive(event, ${userId}, ${newStatus})`);
+    }
 
     showToast(`User ${newStatus ? "activated" : "deactivated"} successfully`, true);
   })
-  .catch(()=>showToast("Server error occurred", false));
+  .catch((error) => {
+    console.error('Error:', error);
+    showToast("Server error occurred", false);
+  });
 }
 
-function showToast(message, success=true){
+function showToast(message, success = true) {
   Toastify({
     text: message,
     duration: 3000,
@@ -255,9 +443,16 @@ function showToast(message, success=true){
     close: true,
     backgroundColor: success
       ? "linear-gradient(to right, #00b09b, #96c93d)"
-      : "linear-gradient(to right, #ff416c, #ff4b2b)"
+      : "linear-gradient(to right, #ff416c, #ff4b2b)",
+    stopOnFocus: true
   }).showToast();
 }
+
+// Initial render
+setTimeout(() => {
+  initializeRows();
+  renderTable();
+}, 200);
 </script>
 
 {% endblock %}

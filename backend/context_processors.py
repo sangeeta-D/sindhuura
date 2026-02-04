@@ -22,5 +22,5 @@ def sidebar_menus(request):
 
 def registered_user_count(request):
     return {
-        "user_count": CustomUser.objects.filter(is_active=True).count()
+        "user_count": CustomUser.objects.filter(is_active=True, role="user").count()
     }

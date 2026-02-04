@@ -13,6 +13,11 @@ urlpatterns = [
 
     path("add-success-stories/", AddSuccessStoryAPIView.as_view(), name="add-success-story"),
     path("success-stories/", SuccessStoryListAPIView.as_view(), name="success-stories"),
+    path(
+        "delete-success-stories/<int:story_id>/",
+        DeleteSuccessStoryAPIView.as_view(),
+        name="delete_success_story"
+    ),
     path("my-success-stories/", MySuccessStoriesAPIView.as_view()),
     path('delete-success-story/<int:story_id>/', DeleteSuccessStoryAPIView.as_view(), name='delete-success-story'),
     path('banners/', StoryBannerListAPIView.as_view(), name='api_banners'),
