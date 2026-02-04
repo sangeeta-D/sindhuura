@@ -26,7 +26,15 @@ SECRET_KEY = 'django-insecure-s#&uh%r2vf%h!=elrnjbs409yye*6xymf3wcue=*f8#u@8rnwq
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/1"
+CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/2"
 
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+
+CELERY_TIMEZONE = "Asia/Kolkata"
+CELERY_ENABLE_UTC = True
 
 # Application definition
 
@@ -45,6 +53,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'chat',
     'channels',
+    "django_celery_beat",
+    "django_celery_results",
 ]
 ASGI_APPLICATION = "sindhuura.asgi.application"
 
