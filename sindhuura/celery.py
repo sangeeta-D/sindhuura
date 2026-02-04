@@ -1,8 +1,9 @@
-from celery.schedules import crontab
+import os
+from celery import Celery
 
-CELERY_BEAT_SCHEDULE = {
-    "expire-subscriptions-daily": {
-        "task": "subscriptions.tasks.expire_subscriptions",
-        "schedule": crontab(hour=0, minute=5),  # every day at 12:05 AM
-    },
-}
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "sindhuura.settings")
+
+app = Celery("sindhuura")
+
+app.config_from_object("django.conf:settings", namespace="CELERY")
+app.autodiscover_tasks()
