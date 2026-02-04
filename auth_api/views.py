@@ -8,6 +8,8 @@ from rest_framework import status as drf_status
 from django.contrib.auth import authenticate
 import razorpay
 import re
+from datetime import timedelta
+from django.utils import timezone
 from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth.hashers import make_password, check_password
@@ -364,6 +366,9 @@ class VerifySubscriptionPaymentAPIView(APIView, APIResponseMixin):
 
         payment.payment_status = "success"
         payment.paid_at = timezone.now()
+        payment.expires_at = payment.paid_at + timedelta(
+            days=payment.subscription.validity
+        )
         payment.save()
 
         return self.success_response(

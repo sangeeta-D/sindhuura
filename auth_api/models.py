@@ -380,7 +380,8 @@ class SubscriptionPayment(models.Model):
         ("pending", "Pending"),
         ("success", "Success"),
         ("failed", "Failed"),
-        ("refunded", "Refunded"),
+        ("expired", "Expired")
+
     )
 
     user = models.ForeignKey(
@@ -420,6 +421,7 @@ class SubscriptionPayment(models.Model):
         null=True,
         blank=True
     )
+    expires_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(
         auto_now_add=True
