@@ -376,10 +376,30 @@ class FetchPersonalLifestyleSerializer(serializers.ModelSerializer):
 class MatrimonyProfileSerializer(serializers.ModelSerializer):
     user = UserProfileSerializer()
     lifestyle = FetchPersonalLifestyleSerializer(required=False)
+    
+    # 🔹 Display religion and caste with both id and name
+    religion = serializers.SerializerMethodField()
+    caste = serializers.SerializerMethodField()
 
     class Meta:
         model = MatrimonyProfile
         exclude = ("id", "created_at")
+
+    def get_religion(self, obj):
+        if obj.religion:
+            return {
+                "id": obj.religion.id,
+                "name": obj.religion.name
+            }
+        return None
+
+    def get_caste(self, obj):
+        if obj.caste:
+            return {
+                "id": obj.caste.id,
+                "name": obj.caste.name
+            }
+        return None
 
     def update(self, instance, validated_data):
         # ---- Update User ----
