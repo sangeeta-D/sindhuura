@@ -293,7 +293,7 @@ class CreateSubscriptionOrderAPIView(APIView, APIResponseMixin):
     def post(self, request):
         print("🔥 API HIT 🔥")
         print("RAZORPAY KEY:", settings.RAZORPAY_KEY_ID)
-        print("RAZORPAY SECRET:", settings.RAZORPAY_KEY_SECRET)
+
         subscription_id = request.data.get("subscription_id")
 
         if not subscription_id:
@@ -307,8 +307,9 @@ class CreateSubscriptionOrderAPIView(APIView, APIResponseMixin):
         except SubscriptionPlan.DoesNotExist:
             return self.error_response("Invalid subscription plan")
 
-        # ✅ Safe amount conversion
-        amount_paise = int(Decimal(plan.price) * 100)
+        amount_paise = int(float(plan.price) * 100)
+        if amount_paise <= 0:
+            return self.error_response("Invalid amount")
 
         try:
             client = razorpay.Client(
@@ -319,14 +320,10 @@ class CreateSubscriptionOrderAPIView(APIView, APIResponseMixin):
                 "amount": amount_paise,
                 "currency": "INR",
                 "receipt": f"sub_{plan.id}_{request.user.id}",
-                "payment_capture": 1
             })
 
         except razorpay.errors.BadRequestError as e:
-            return self.error_response(
-                message="Razorpay order creation failed",
-                data=str(e)
-            )
+            return self.error_response(str(e))
 
         payment = SubscriptionPayment.objects.create(
             user=request.user,
@@ -348,7 +345,7 @@ class CreateSubscriptionOrderAPIView(APIView, APIResponseMixin):
                 "plan_name": plan.plan_name
             }
         )
-
+    
 class VerifySubscriptionPaymentAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
 
