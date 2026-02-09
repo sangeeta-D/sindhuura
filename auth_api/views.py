@@ -772,3 +772,33 @@ class VerifyOTPAPIView(APIView, APIResponseMixin):
         return self.success_response(message="OTP verified successfully")
     
 
+
+class CheckEmailExistsAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+
+        if not email:
+            return Response(
+                {
+                    "status": False,
+                    "message": "Email is required",
+                    "response": []
+                },
+                status=400
+            )
+
+        exists = User.objects.filter(email__iexact=email).exists()
+
+        return Response(
+            {
+                "status": True,
+                "message": "Email check completed",
+                "response": {
+                    "email": email,
+                    "exists": exists
+                }
+            },
+            status=200
+        )

@@ -8,6 +8,7 @@ urlpatterns = [
     path('register/',RegisterAPIView.as_view(), name='register'),
     path('add-personal-details/', PersonalLifestyleAPIView.as_view(), name='personal_lifestyle'),
     path("drop-downs/",LifestyleMasterDataAPIView.as_view(),name="lifestyle-master-data"),
+    path("check-email/", CheckEmailExistsAPIView.as_view(), name="check-email"),
 
     path("subscription-plans/",SubscriptionPlanListAPI.as_view(),name="subscription-plans"),
     path("upload-images/", UserMultipleImageUploadAPI.as_view(), name="upload-images"),
