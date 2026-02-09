@@ -353,7 +353,17 @@ def user_details(request, user_id):
         .prefetch_related("user_images")
         .get(id=user_id)
     )
-    return render(request, "user_details.html", {"user": user})
+    
+    # Fetch active or latest subscription payment
+    subscription = SubscriptionPayment.objects.filter(
+        user=user,
+        payment_status='success'
+    ).select_related('subscription').order_by('-paid_at').first()
+    
+    return render(request, "user_details.html", {
+        "user": user,
+        "subscription": subscription
+    })
 
   # Only admins can toggle
 @require_POST
@@ -701,6 +711,13 @@ def success_story(request):
         .order_by("-created_at")
     )
     return render(request, 'success_story.html', {'stories': stories})
+
+
+def delete_success_story(request, story_id):
+    story = get_object_or_404(SuccessStory, id=story_id)
+    story.delete()
+    messages.success(request, "Success story deleted successfully.")
+    return redirect("success_stories")
 
 def revenue(request):
     selected_month = request.GET.get("month")

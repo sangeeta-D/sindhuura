@@ -25,8 +25,7 @@ urlpatterns = [
     path("send-mail/<int:user_id>/", views.compose_mail, name="send_mail"),
     path("blogs/", views.blogs, name="blogs"),
     path('events/',views.events,name="events"),
-    path('success-stories/',views.success_story,name="success_stories"),
-    path('revenue/',views.revenue,name="revenue"),
+    path('success-stories/',views.success_story,name="success_stories"),    path('success-stories/delete/<int:story_id>/',views.delete_success_story,name="delete_success_story"),    path('revenue/',views.revenue,name="revenue"),
 
     path('users/<int:user_id>/toggle-verified/', views.toggle_user_verified, name='toggle_user_verified'),
     path('users/<int:user_id>/toggle-active/', views.toggle_user_active, name='toggle_user_active'),

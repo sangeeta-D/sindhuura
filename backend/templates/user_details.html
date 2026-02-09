@@ -52,6 +52,82 @@
       </div>
     </div>
 
+    <!-- ================= SUBSCRIPTION DETAILS ================= -->
+    {% if subscription %}
+    <div class="card mb-4 border-primary">
+      <div class="card-header fw-semibold bg-light-primary text-primary">
+        <i class="bx bx-crown"></i> Subscription Details
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <strong>Plan Name:</strong> 
+            <p class="mb-0">{{ subscription.subscription.plan_name }}</p>
+          </div>
+          <div class="col-md-3">
+            <strong>Amount Paid:</strong> 
+            <p class="mb-0">₹{{ subscription.amount }}</p>
+          </div>
+          <div class="col-md-3">
+            <strong>Purchased Date:</strong> 
+            <p class="mb-0">{{ subscription.paid_at|date:"d M Y, H:i" }}</p>
+          </div>
+          <div class="col-md-3">
+            <strong>Expiry Date:</strong> 
+            <p class="mb-0">
+              {% if subscription.expires_at %}
+                {{ subscription.expires_at|date:"d M Y" }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </p>
+          </div>
+
+          <div class="col-md-3">
+            <strong>Status:</strong> 
+            <p class="mb-0">
+              <span class="badge {% if subscription.payment_status == 'success' %}bg-success{% elif subscription.payment_status == 'pending' %}bg-warning{% else %}bg-danger{% endif %}">
+                {{ subscription.payment_status|title }}
+              </span>
+            </p>
+          </div>
+          <div class="col-md-3">
+            <strong>Validity:</strong> 
+            <p class="mb-0">{{ subscription.subscription.validity }} days</p>
+          </div>
+          <div class="col-md-3">
+            <strong>Transaction ID:</strong> 
+            <p class="mb-0"><code>{{ subscription.transaction_id }}</code></p>
+          </div>
+          <div class="col-md-3">
+            <strong>Subscription Status:</strong> 
+            <p class="mb-0">
+              {% if subscription.expires_at and subscription.expires_at > now %}
+                <span class="badge bg-success">Active</span>
+              {% elif subscription.expires_at %}
+                <span class="badge bg-danger">Expired</span>
+              {% else %}
+                <span class="badge bg-secondary">Inactive</span>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+
+        {% if subscription.subscription.description %}
+        <hr>
+        <div>
+          <strong>Description:</strong>
+          <p class="mb-0">{{ subscription.subscription.description }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info mb-4">
+      <i class="bx bx-info-circle"></i> This user does not have any active subscription.
+    </div>
+    {% endif %}
+
     <!-- ================= MATRIMONY PROFILE ================= -->
     {% if user.profile %}
     <div class="card mb-4">
