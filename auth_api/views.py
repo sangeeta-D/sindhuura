@@ -291,6 +291,9 @@ class CreateSubscriptionOrderAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        print("🔥 API HIT 🔥")
+        print("RAZORPAY KEY:", settings.RAZORPAY_KEY_ID)
+        print("RAZORPAY SECRET:", settings.RAZORPAY_KEY_SECRET)
         subscription_id = request.data.get("subscription_id")
 
         if not subscription_id:
