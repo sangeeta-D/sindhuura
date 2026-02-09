@@ -286,12 +286,14 @@ class LoginAPIView(APIResponseMixin, APIView):
             status_code=drf_status.HTTP_200_OK
         )
     
-
 class CreateSubscriptionOrderAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         subscription_id = request.data.get("subscription_id")
+
+        if not subscription_id:
+            return self.error_response("subscription_id is required")
 
         try:
             plan = SubscriptionPlan.objects.get(
@@ -301,15 +303,26 @@ class CreateSubscriptionOrderAPIView(APIView, APIResponseMixin):
         except SubscriptionPlan.DoesNotExist:
             return self.error_response("Invalid subscription plan")
 
-        client = razorpay.Client(
-            auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
-        )
+        # ✅ Safe amount conversion
+        amount_paise = int(Decimal(plan.price) * 100)
 
-        razorpay_order = client.order.create({
-            "amount": int(plan.price * 100),  # paise
-            "currency": "INR",
-            "payment_capture": 1
-        })
+        try:
+            client = razorpay.Client(
+                auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
+            )
+
+            razorpay_order = client.order.create({
+                "amount": amount_paise,
+                "currency": "INR",
+                "receipt": f"sub_{plan.id}_{request.user.id}",
+                "payment_capture": 1
+            })
+
+        except razorpay.errors.BadRequestError as e:
+            return self.error_response(
+                message="Razorpay order creation failed",
+                data=str(e)
+            )
 
         payment = SubscriptionPayment.objects.create(
             user=request.user,
@@ -326,12 +339,11 @@ class CreateSubscriptionOrderAPIView(APIView, APIResponseMixin):
                 "payment_id": payment.id,
                 "razorpay_order_id": razorpay_order["id"],
                 "razorpay_key": settings.RAZORPAY_KEY_ID,
-                "amount": plan.price,
+                "amount": amount_paise,
                 "currency": "INR",
                 "plan_name": plan.plan_name
             }
         )
-    
 
 class VerifySubscriptionPaymentAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
