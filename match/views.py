@@ -216,6 +216,14 @@ class SendMatchRequestAPIView(APIResponseMixin, APIView):
             from_user=from_user,
             to_user=to_user
         )
+        Notification.objects.create(
+            recipient=to_user,
+            sender=from_user,
+            notification_type="match_request",
+            title="New Match Request",
+            message=f"You have received a match request from {from_user.name or from_user.email}",
+            match_request=match_request
+        )
 
         # Debug: Print notification details
         print(f"Debug: Match request created. Sending notification to {to_user.email}, token: {to_user.fcm_token}")
@@ -456,7 +464,15 @@ class AcceptMatchRequestAPIView(APIView, APIResponseMixin):
         # ✅ Accept match request
         match_request.status = "accepted"
         match_request.save(update_fields=["status", "updated_at"])
-
+        # ✅ Store notification in DB
+        Notification.objects.create(
+            recipient=match_request.from_user,
+            sender=match_request.to_user,
+            notification_type="match_accepted",
+            title="Match Request Accepted",
+            message=f"Your match request to {match_request.to_user.name or match_request.to_user.email} has been accepted",
+            match_request=match_request
+        )
         # Debug: Print notification details
         print(f"Debug: Match request accepted. Sending notification to {match_request.from_user.email}, token: {match_request.from_user.fcm_token}")
 

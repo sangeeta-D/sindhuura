@@ -147,14 +147,13 @@ RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID')
 RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET')
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
 MYSMSMANTRA_CLIENT_ID = config("MYSMSMANTRA_CLIENT_ID")
 MYSMSMANTRA_API_KEY = config("MYSMSMANTRA_API_KEY")
 MYSMSMANTRA_SENDER_ID = config("MYSMSMANTRA_SENDER_ID")
 MYSMSMANTRA_ROUTE = config("MYSMSMANTRA_ROUTE")
 MYSMSMANTRA_DLT_TEMPLATE_ID = config("MYSMSMANTRA_DLT_TEMPLATE_ID")
+MYSMSMANTRA_DLT_TEMPLATE_MESSAGE = config("MYSMSMANTRA_DLT_TEMPLATE_MESSAGE")  # Add this
 OTP_EXPIRY_MINUTES = config("OTP_EXPIRY_MINUTES", cast=int, default=5)
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',

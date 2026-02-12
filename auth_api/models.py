@@ -133,7 +133,7 @@ class PhoneOTP(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_expired(self):
-        return timezone.now() > self.created_at + timezone.timedelta(minutes=5)
+        return timezone.now() > self.created_at + timezone.timedelta(minutes=10)
 
 
 class UserImage(models.Model):

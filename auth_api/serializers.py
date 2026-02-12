@@ -10,16 +10,18 @@ import pytz
 from backend.models import Blog
 
 class RegisterSerializer(serializers.Serializer):
+
     # 🔐 USER FIELDS
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, min_length=8)
     confirm_password = serializers.CharField(write_only=True)
 
-    phone_number = serializers.CharField(required=False, allow_blank=True)
+    phone_number = serializers.CharField(required=True, allow_blank=False)
     name = serializers.CharField(required=False, allow_blank=True)
 
     profile_image = serializers.ImageField(required=False, allow_null=True)
     aadhaar_card = serializers.FileField(required=False, allow_null=True)
+    otp = serializers.CharField(write_only=True, required=True)
 
     # 🧍 MATRIMONY PROFILE FIELDS
     this_account_for = serializers.ChoiceField(
@@ -94,7 +96,6 @@ class RegisterSerializer(serializers.Serializer):
 
     # ✅ VALIDATIONS
     def validate(self, data):
-
         if data["password"] != data["confirm_password"]:
             raise serializers.ValidationError("Passwords do not match")
 
@@ -115,6 +116,10 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Children count required for married profiles"
             )
+
+        # OTP presence is checked in view, but ensure it's present
+        if not data.get("otp"):
+            raise serializers.ValidationError({"otp": "OTP is required."})
 
         return data
 

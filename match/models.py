@@ -111,3 +111,53 @@ class ContactInfoView(models.Model):
 
     def __str__(self):
         return f"{self.viewer.email} viewed {self.viewed_user.email} ({self.views_count} times)"
+    
+class Notification(models.Model):
+
+    NOTIFICATION_TYPES = (
+        ("match_request", "Match Request"),
+        ("match_accepted", "Match Accepted"),
+        ("match_rejected", "Match Rejected"),
+        ("general", "General"),
+    )
+
+    recipient = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name="notifications"
+    )
+
+    sender = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sent_notifications"
+    )
+
+    notification_type = models.CharField(
+        max_length=30,
+        choices=NOTIFICATION_TYPES
+    )
+
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+
+    # Optional: Link to match request
+    match_request = models.ForeignKey(
+        MatchRequest,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="notifications"
+    )
+
+    is_read = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.recipient.email} - {self.notification_type}"

@@ -39,6 +39,40 @@ class RegisterAPIView(APIResponseMixin, APIView):
                 status_code=status.HTTP_400_BAD_REQUEST
             )
 
+        # OTP Verification before registration
+        phone_number = serializer.validated_data.get("phone_number")
+        otp = request.data.get("otp")
+        if not phone_number or not otp:
+            return self.error_response(
+                errors={"otp": "Phone number and OTP are required for registration."},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        from .models import PhoneOTP
+        try:
+            phone_otp_obj = PhoneOTP.objects.filter(phone_number=phone_number, is_verified=True).latest('created_at')
+        except PhoneOTP.DoesNotExist:
+            return self.error_response(
+                errors={"otp": "OTP not sent or not verified for this phone number."},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        if phone_otp_obj.otp != otp:
+            return self.error_response(
+                errors={"otp": "Invalid OTP."},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        if phone_otp_obj.is_expired():
+            return self.error_response(
+                errors={"otp": "OTP has expired."},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Mark OTP as used (optional, for security)
+        phone_otp_obj.is_verified = True
+        phone_otp_obj.save()
+
         user, profile = serializer.save()
 
         # 🔐 Generate JWT Tokens

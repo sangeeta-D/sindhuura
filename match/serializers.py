@@ -384,7 +384,7 @@ class EventSerializer(serializers.ModelSerializer):
 class ReportReasonSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReportReason
-        fields = ["id", "title", "description"]
+        fields = ["id", "title"]
 
 
 class UserReportCreateSerializer(serializers.ModelSerializer):
