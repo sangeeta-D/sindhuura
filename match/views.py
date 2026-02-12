@@ -41,6 +41,9 @@ class MatchProfileListAPIView(APIResponseMixin, APIView):
 
             # 🔹 Exclude self
             matches = matches.exclude(user=user)
+            
+            # 🔹 Exclude soft-deleted users
+            matches = matches.exclude(user__is_deleted=True)
 
             # 🔹 Religion / caste filtering
             if my_profile.religion:
@@ -164,6 +167,7 @@ class MatrimonyProfileSearchAPIView(APIResponseMixin, APIView):
                 Q(user__name__icontains=search_query) |
                 Q(user__unique_id__icontains=search_query)
             )
+            .exclude(user__is_deleted=True)
         )
 
         if not profiles.exists():
@@ -199,8 +203,13 @@ class SendMatchRequestAPIView(APIResponseMixin, APIView):
             return self.error_response(
                 "You cannot send a match request to yourself",
                 status_code=status.HTTP_400_BAD_REQUEST
+            )        
+        # ❌ Prevent sending request to deleted account
+        if to_user.is_deleted:
+            return self.error_response(
+                "This user account has been deleted",
+                status_code=status.HTTP_400_BAD_REQUEST
             )
-
         # 🔒 Prevent duplicate requests
         if MatchRequest.objects.filter(
             from_user=from_user,

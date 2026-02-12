@@ -39,48 +39,6 @@ class RegisterAPIView(APIResponseMixin, APIView):
                 status_code=status.HTTP_400_BAD_REQUEST
             )
 
-        # OTP Verification before registration
-        phone_number = serializer.validated_data.get("phone_number")
-        otp = request.data.get("otp")
-        if not phone_number or not otp:
-            return self.error_response(
-                errors={"otp": "Phone number and OTP are required for registration."},
-                status_code=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Format and validate phone number
-        formatted_phone = validate_and_format_phone(phone_number)
-        if not formatted_phone:
-            return self.error_response(
-                errors={"phone_number": "Invalid phone number format."},
-                status_code=status.HTTP_400_BAD_REQUEST
-            )
-
-        from .models import PhoneOTP
-        try:
-            phone_otp_obj = PhoneOTP.objects.filter(phone_number=formatted_phone, is_verified=True).latest('created_at')
-        except PhoneOTP.DoesNotExist:
-            return self.error_response(
-                errors={"otp": "OTP not sent or not verified for this phone number."},
-                status_code=status.HTTP_400_BAD_REQUEST
-            )
-
-        if phone_otp_obj.otp != otp:
-            return self.error_response(
-                errors={"otp": "Invalid OTP."},
-                status_code=status.HTTP_400_BAD_REQUEST
-            )
-
-        if phone_otp_obj.is_expired():
-            return self.error_response(
-                errors={"otp": "OTP has expired."},
-                status_code=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Mark OTP as used (optional, for security)
-        phone_otp_obj.is_verified = True
-        phone_otp_obj.save()
-
         user, profile = serializer.save()
 
         # 🔐 Generate JWT Tokens
@@ -296,6 +254,13 @@ class LoginAPIView(APIResponseMixin, APIView):
             return self.error_response(
                 errors="Invalid email or password",
                 status_code=drf_status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Check if account is soft deleted
+        if user.is_deleted:
+            return self.error_response(
+                errors="This account has been deleted. You can reactivate within 30 days by contacting support.",
+                status_code=drf_status.HTTP_403_FORBIDDEN
             )
 
         if not user.is_active:
@@ -1121,97 +1086,27 @@ class DeleteAccountAPIView(APIView, APIResponseMixin):
 
         try:
             with transaction.atomic():
-                # Import match app models
-                from match.models import MatchRequest, Notification, SuccessStory, ContactInfoView
+                # Soft delete: Mark user as deleted instead of hard delete
+                user.is_deleted = True
+                user.deleted_at = timezone.now()
+                user.is_active = False  # Deactivate account immediately
+                user.save()
                 
-                # Delete in correct order to avoid cascade issues
-                
-                # 1. Delete notifications first (before match requests)
-                try:
-                    Notification.objects.filter(recipient=user).delete()
-                    Notification.objects.filter(sender=user).delete()
-                    print("🗑️ Deleted notifications")
-                except Exception as e:
-                    print(f"⚠️  Warning deleting notifications: {str(e)}")
-
-                # 2. Delete match requests (will cascade delete related notifications)
-                try:
-                    MatchRequest.objects.filter(from_user=user).delete()
-                    MatchRequest.objects.filter(to_user=user).delete()
-                    print("🗑️ Deleted match requests")
-                except Exception as e:
-                    print(f"⚠️  Warning deleting match requests: {str(e)}")
-
-                # 3. Delete contact info views
-                try:
-                    ContactInfoView.objects.filter(viewer=user).delete()
-                    ContactInfoView.objects.filter(viewed_user=user).delete()
-                    print("🗑️ Deleted contact info views")
-                except Exception as e:
-                    print(f"⚠️  Warning deleting contact info views: {str(e)}")
-
-                # 4. Delete success stories and their images
-                try:
-                    success_stories = SuccessStory.objects.filter(created_by=user)
-                    for story in success_stories:
-                        story.images.all().delete()
-                    success_stories.delete()
-                    print("🗑️ Deleted success stories")
-                except Exception as e:
-                    print(f"⚠️  Warning deleting success stories: {str(e)}")
-
-                # 5. Delete auth_api app related data
-                try:
-                    UserImage.objects.filter(user=user).delete()
-                    print("🗑️ Deleted user images")
-                except Exception as e:
-                    print(f"⚠️  Warning deleting user images: {str(e)}")
-
-                try:
-                    PersonalLifestyle.objects.filter(profile__user=user).delete()
-                    print("🗑️ Deleted personal lifestyle")
-                except Exception as e:
-                    print(f"⚠️  Warning deleting personal lifestyle: {str(e)}")
-
-                try:
-                    MatrimonyProfile.objects.filter(user=user).delete()
-                    print("🗑️ Deleted matrimony profile")
-                except Exception as e:
-                    print(f"⚠️  Warning deleting matrimony profile: {str(e)}")
-
-                try:
-                    SubscriptionPayment.objects.filter(user=user).delete()
-                    print("🗑️ Deleted subscription payments")
-                except Exception as e:
-                    print(f"⚠️  Warning deleting subscription payments: {str(e)}")
-
-                try:
-                    PhoneOTP.objects.filter(phone_number=phone_number).delete()
-                    print("🗑️ Deleted OTP records")
-                except Exception as e:
-                    print(f"⚠️  Warning deleting OTP records: {str(e)}")
-
-                # 6. Finally delete user account
-                try:
-                    user_email = user.email
-                    user.delete()
-                    print(f"🗑️ Deleted user account: {user_email}")
-                except Exception as e:
-                    print(f"❌ Error deleting user account: {str(e)}")
-                    raise
+                print(f"🗑️ Soft deleted user account: {user.email}")
+                print(f"⏰ Scheduled for hard deletion on: {user.deleted_at + timezone.timedelta(days=30)}")
 
         except Exception as e:
-            print(f"❌ Error deleting account: {str(e)}")
+            print(f"❌ Error soft deleting account: {str(e)}")
             return self.error_response(
                 f"Error deleting account: {str(e)}",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        print("🎉 Account deleted successfully")
+        print("🎉 Account soft deleted successfully")
         print("=" * 70 + "\n")
 
         return self.success_response(
-            message="Account deleted successfully. All your data has been removed.",
+            message="Your account has been marked for deletion. It will be permanently deleted after 30 days. You can reactivate your account within 30 days by logging in.",
             status_code=status.HTTP_200_OK
         )
 

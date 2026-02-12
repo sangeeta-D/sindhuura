@@ -36,6 +36,16 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Asia/Kolkata"
 CELERY_ENABLE_UTC = True
 
+# Celery Beat Schedule
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'hard-delete-soft-deleted-users': {
+        'task': 'auth_api.tasks.hard_delete_soft_deleted_users',
+        'schedule': crontab(hour=2, minute=0),  # Run daily at 2:00 AM IST
+    },
+}
+
 # Application definition
 
 INSTALLED_APPS = [

@@ -58,6 +58,8 @@ class ChatUserListAPIView(APIView, APIResponseMixin):
         chat_rooms = (
             ChatRoom.objects
             .filter(Q(user1=user) | Q(user2=user))
+            .exclude(user1__is_deleted=True)
+            .exclude(user2__is_deleted=True)
             .annotate(
                 last_message_text=Subquery(
                     last_message_qs.values("message_text")[:1]

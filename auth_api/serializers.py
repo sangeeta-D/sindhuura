@@ -47,7 +47,6 @@ class RegisterSerializer(serializers.Serializer):
 
     profile_image = serializers.ImageField(required=False, allow_null=True)
     aadhaar_card = serializers.FileField(required=False, allow_null=True)
-    otp = serializers.CharField(write_only=True, required=True)
 
     # 🧍 MATRIMONY PROFILE FIELDS
     this_account_for = serializers.ChoiceField(
@@ -156,7 +155,6 @@ class RegisterSerializer(serializers.Serializer):
         # Remove non-model fields
         validated_data.pop("confirm_password")
         password = validated_data.pop("password")
-        otp = validated_data.pop("otp", None)  # Remove OTP - not needed for profile creation
 
         # Pop USER-ONLY fields
         profile_image = validated_data.pop("profile_image", None)

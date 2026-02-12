@@ -59,6 +59,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_verified = models.BooleanField(default=False)
 
     date_joined = models.DateTimeField(default=timezone.now)
+    
+    # 🗑️ Soft Delete Fields
+    is_deleted = models.BooleanField(default=False, db_index=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     profile_image = models.ImageField(
         upload_to='profile_images/',
