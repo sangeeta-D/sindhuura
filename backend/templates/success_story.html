@@ -13,6 +13,7 @@
         <div class="card h-100 shadow-sm story-card" 
              data-bs-toggle="modal"
              data-bs-target="#storyModal"
+             data-story-id="{{ story.id }}"
              data-couple="{{ story.couple_name }}"
              data-date="{{ story.wedding_date }}"
              data-venue="{{ story.venue }}"
@@ -114,8 +115,11 @@
 
 <!-- ================= SCRIPTS ================= -->
 <script>
+let currentStoryId = null;
+
 document.querySelectorAll(".story-card").forEach(card => {
   card.addEventListener("click", function () {
+    currentStoryId = this.dataset.storyId;
     document.getElementById("modalCouple").innerText = this.dataset.couple;
     document.getElementById("modalDate").innerText = this.dataset.date;
     document.getElementById("modalVenue").innerText = this.dataset.venue;
@@ -141,6 +145,17 @@ document.querySelectorAll(".story-card").forEach(card => {
 function openImagePreview(imageUrl) {
   document.getElementById("previewImage").src = imageUrl;
   new bootstrap.Modal(document.getElementById("imagePreviewModal")).show();
+}
+
+function deleteStory() {
+  if (!currentStoryId) {
+    alert("Error: Story ID not found");
+    return;
+  }
+  
+  if (confirm("Are you sure you want to delete this success story?")) {
+    window.location.href = `/success-stories/delete/${currentStoryId}/`;
+  }
 }
 </script>
 
