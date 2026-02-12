@@ -26,5 +26,5 @@ urlpatterns = [
 
     path("report-reasons/", ReportReasonListAPIView.as_view()),
     path("report-user/", UserReportCreateAPIView.as_view()),
-
+    path("notifications/", NotificationListAPIView.as_view(), name="notifications"),
 ]

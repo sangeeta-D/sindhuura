@@ -48,9 +48,17 @@ class RegisterAPIView(APIResponseMixin, APIView):
                 status_code=status.HTTP_400_BAD_REQUEST
             )
 
+        # Format and validate phone number
+        formatted_phone = validate_and_format_phone(phone_number)
+        if not formatted_phone:
+            return self.error_response(
+                errors={"phone_number": "Invalid phone number format."},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
         from .models import PhoneOTP
         try:
-            phone_otp_obj = PhoneOTP.objects.filter(phone_number=phone_number, is_verified=True).latest('created_at')
+            phone_otp_obj = PhoneOTP.objects.filter(phone_number=formatted_phone, is_verified=True).latest('created_at')
         except PhoneOTP.DoesNotExist:
             return self.error_response(
                 errors={"otp": "OTP not sent or not verified for this phone number."},
@@ -681,23 +689,29 @@ from django.core.cache import cache
 
 def validate_and_format_phone(phone_number):
     """
-    Validate and format Indian phone number
+    Validate and format Indian phone number to +91XXXXXXXXXX format
     """
     print(f"\n🔍 Validating phone: '{phone_number}'")
     
-    # Remove any spaces, dashes, or plus signs
-    phone = re.sub(r'[\s\-\+]', '', phone_number)
+    # Remove any spaces and dashes
+    phone = re.sub(r'[\s\-]', '', str(phone_number))
     print(f"🔍 After cleanup: '{phone}'")
     
-    # If it starts with 91 and is 12 digits
-    if phone.startswith('91') and len(phone) == 12:
-        print(f"✅ Valid format (12 digits with 91): {phone}")
+    # If it starts with +91 and is correct length
+    if phone.startswith('+91') and len(phone) == 13:
+        print(f"✅ Valid format (with +91): {phone}")
         return phone
     
-    # If it's 10 digits, add country code
+    # If it starts with 91 (without +)
+    if phone.startswith('91') and len(phone) == 12:
+        result = f"+{phone}"
+        print(f"✅ Valid format (91 prefix, adding +): {result}")
+        return result
+    
+    # If it's 10 digits, add +91
     if len(phone) == 10 and phone[0] in '6789':
-        result = f"91{phone}"
-        print(f"✅ Valid format (10 digits): {result}")
+        result = f"+91{phone}"
+        print(f"✅ Valid format (10 digits, adding +91): {result}")
         return result
     
     print(f"❌ Invalid format")
@@ -786,9 +800,15 @@ class VerifyOTPAPIView(APIView, APIResponseMixin):
         if not phone_number or not otp:
             return self.error_response("Phone number and OTP are required")
 
+        # Validate and format phone number
+        formatted_phone = validate_and_format_phone(phone_number)
+        
+        if not formatted_phone:
+            return self.error_response("Invalid phone number format")
+
         try:
             otp_obj = PhoneOTP.objects.get(
-                phone_number=phone_number,
+                phone_number=formatted_phone,
                 is_verified=False
             )
         except PhoneOTP.DoesNotExist:
@@ -797,15 +817,404 @@ class VerifyOTPAPIView(APIView, APIResponseMixin):
         if otp_obj.is_expired():
             return self.error_response("OTP expired")
         
-        # Check hashed OTP
-        if not check_password(otp, otp_obj.otp):
+        # Compare OTP as plain text (not hashed)
+        if otp_obj.otp != otp:
             return self.error_response("Invalid OTP")
 
         otp_obj.is_verified = True
         otp_obj.save()
 
         return self.success_response(message="OTP verified successfully")
-    
+
+
+class ResendOTPAPIView(APIView, APIResponseMixin):
+    """
+    Resend OTP to a phone number that already has a pending OTP request.
+    Applies rate limiting to prevent abuse.
+    """
+    def post(self, request):
+        print("\n" + "🔄 " + "=" * 60)
+        print("🔄 RESEND OTP API CALLED")
+        print("🔄 " + "=" * 60)
+        
+        phone_number = request.data.get("phone_number", "").strip()
+        print(f"📥 Received phone_number: '{phone_number}'")
+
+        if not phone_number:
+            print("❌ Phone number is empty")
+            return self.error_response("Phone number is required")
+        
+        # Validate and format phone number
+        formatted_phone = validate_and_format_phone(phone_number)
+        
+        if not formatted_phone:
+            print("❌ Phone validation failed")
+            return self.error_response("Invalid phone number format. Use 10-digit Indian mobile number")
+        
+        print(f"✅ Formatted phone: {formatted_phone}")
+        
+        # Check if OTP exists for this phone (either verified or not)
+        try:
+            existing_otp = PhoneOTP.objects.filter(
+                phone_number=formatted_phone
+            ).latest('created_at')
+            print(f"✅ Found existing OTP record for resend")
+        except PhoneOTP.DoesNotExist:
+            print("❌ No OTP request found for this phone number")
+            return self.error_response(
+                "No OTP request found. Please request a new OTP first.",
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Rate limiting for resend
+        cache_key = f"otp_resend_limit_{formatted_phone}"
+        print(f"\n🔒 Checking resend rate limit with key: {cache_key}")
+        
+        if cache.get(cache_key):
+            print("⏳ Resend rate limit hit - user must wait")
+            return self.error_response(
+                "Please wait 1 minute before requesting another OTP",
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+        
+        print("✅ Resend rate limit check passed")
+
+        # Generate new OTP
+        otp = str(random.randint(100000, 999999))
+        print(f"\n🎲 Generated new OTP: {otp}")
+        
+        # Delete old OTPs
+        deleted_count = PhoneOTP.objects.filter(
+            phone_number=formatted_phone
+        ).delete()[0]
+        print(f"🗑️ Deleted {deleted_count} old OTP records")
+
+        # Create new OTP
+        print(f"💾 Creating new OTP record in database...")
+        otp_obj = PhoneOTP.objects.create(
+            phone_number=formatted_phone,
+            otp=otp
+        )
+        print(f"✅ OTP record created: ID={otp_obj.id}")
+
+        # Send SMS
+        print(f"\n📤 Attempting to send SMS...")
+        sms_result = send_sms_otp(formatted_phone, otp)
+        print(f"\n📬 SMS Send Result: {sms_result}")
+        
+        if not sms_result:
+            print("❌ SMS sending failed")
+            return self.error_response(
+                "Failed to resend OTP",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        print("✅ SMS sent successfully")
+        
+        # Set resend rate limit
+        cache.set(cache_key, True, 60)
+        print(f"🔒 Resend rate limit set for 60 seconds")
+
+        print("🎉 OTP resend process completed successfully")
+        print("=" * 70 + "\n")
+        
+        return self.success_response(message="OTP resent successfully")
+
+
+class ForgotPasswordAPIView(APIView, APIResponseMixin):
+    """
+    Request OTP for password reset via phone number
+    """
+    def post(self, request):
+        print("\n" + "🔐 " + "=" * 60)
+        print("🔐 FORGOT PASSWORD API CALLED")
+        print("🔐 " + "=" * 60)
+        
+        serializer = ForgotPasswordSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return self.error_response(
+                errors=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        phone_number = serializer.validated_data.get("phone_number")
+        email = serializer.validated_data.get("email")
+
+        # Get user by email or phone
+        user = None
+        contact_identifier = None
+        
+        if email:
+            user = User.objects.filter(email=email).first()
+            contact_identifier = email
+            print(f"📧 Searching user by email: {email}")
+        elif phone_number:
+            formatted_phone = validate_and_format_phone(phone_number)
+            user = User.objects.filter(phone_number=formatted_phone).first()
+            contact_identifier = formatted_phone
+            print(f"📱 Searching user by phone: {formatted_phone}")
+
+        if not user:
+            print("❌ User not found")
+            return self.error_response(
+                "User not found",
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        print(f"✅ User found: {user.email}")
+
+        # Generate OTP only for phone-based password reset
+        if phone_number:
+            formatted_phone = validate_and_format_phone(phone_number)
+            
+            # Rate limiting
+            cache_key = f"forgot_pwd_limit_{formatted_phone}"
+            if cache.get(cache_key):
+                print("⏳ Rate limit hit - user must wait")
+                return self.error_response(
+                    "Please wait 1 minute before requesting another OTP",
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS
+                )
+
+            # Generate OTP
+            otp = str(random.randint(100000, 999999))
+            print(f"🎲 Generated OTP: {otp}")
+
+            # Delete old OTPs
+            deleted_count = PhoneOTP.objects.filter(
+                phone_number=formatted_phone,
+                is_verified=False
+            ).delete()[0]
+            print(f"🗑️ Deleted {deleted_count} old OTPs")
+
+            # Create new OTP
+            otp_obj = PhoneOTP.objects.create(
+                phone_number=formatted_phone,
+                otp=otp
+            )
+            print(f"✅ OTP created: {otp_obj.id}")
+
+            # Send SMS
+            print(f"📤 Sending OTP via SMS...")
+            sms_result = send_sms_otp(formatted_phone, otp)
+            
+            if not sms_result:
+                print("❌ SMS sending failed")
+                return self.error_response(
+                    "Failed to send OTP",
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            # Set rate limit
+            cache.set(cache_key, True, 60)
+            print(f"✅ SMS sent successfully, rate limit set")
+
+            print("🎉 Forgot password process completed successfully")
+            print("=" * 70 + "\n")
+            
+            return self.success_response(
+                message="OTP sent to your phone. Please verify to reset password.",
+                data={"contact": formatted_phone}
+            )
+
+        return self.error_response(
+            "Phone number is required for password reset",
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+
+
+class ResetPasswordAPIView(APIView, APIResponseMixin):
+    """
+    Reset password with OTP verification
+    """
+    def post(self, request):
+        print("\n" + "🔑 " + "=" * 60)
+        print("🔑 RESET PASSWORD API CALLED")
+        print("🔑 " + "=" * 60)
+        
+        serializer = ResetPasswordSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return self.error_response(
+                errors=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = serializer.validated_data.get("user")
+        phone_number = serializer.validated_data.get("phone_number")
+        new_password = serializer.validated_data.get("new_password")
+        otp = serializer.validated_data.get("otp")
+
+        print(f"👤 Resetting password for user: {user.email}")
+        print(f"🔏 Verifying OTP: {otp}")
+
+        # Format phone if provided
+        if phone_number:
+            formatted_phone = validate_and_format_phone(phone_number)
+            print(f"📱 Phone: {formatted_phone}")
+
+            # Verify OTP (already validated in serializer, but get it for cleanup)
+            try:
+                otp_obj = PhoneOTP.objects.get(
+                    phone_number=formatted_phone,
+                    otp=otp
+                )
+                print("✅ OTP record found")
+            except PhoneOTP.DoesNotExist:
+                print("❌ OTP not found")
+                return self.error_response(
+                    "OTP not found",
+                    status_code=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Update password
+        print(f"🔄 Updating password...")
+        user.set_password(new_password)
+        user.save()
+        print(f"✅ Password updated successfully")
+
+        # Mark OTP as verified and clean up after successful reset
+        if phone_number:
+            formatted_phone = validate_and_format_phone(phone_number)
+            PhoneOTP.objects.filter(
+                phone_number=formatted_phone,
+                otp=otp
+            ).update(is_verified=True)
+            print(f"✅ OTP marked as verified")
+
+        print("🎉 Password reset completed successfully")
+        print("=" * 70 + "\n")
+
+        return self.success_response(
+            message="Password reset successfully. You can now login with your new password.",
+            status_code=status.HTTP_200_OK
+        )
+
+
+class DeleteAccountAPIView(APIView, APIResponseMixin):
+    """
+    Delete user account with OTP verification
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        print("\n" + "🗑️ " + "=" * 60)
+        print("🗑️ DELETE ACCOUNT API CALLED")
+        print("🗑️ " + "=" * 60)
+        
+        serializer = DeleteAccountSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return self.error_response(
+                errors=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = serializer.validated_data.get("user")
+        phone_number = serializer.validated_data.get("formatted_phone")
+        otp = request.data.get("otp")
+
+        print(f"👤 Deleting account for user: {user.email}")
+        print(f"📱 Phone: {phone_number}")
+        print(f"🔏 OTP verified: {otp}")
+
+        try:
+            with transaction.atomic():
+                # Import match app models
+                from match.models import MatchRequest, Notification, SuccessStory, ContactInfoView
+                
+                # Delete in correct order to avoid cascade issues
+                
+                # 1. Delete notifications first (before match requests)
+                try:
+                    Notification.objects.filter(recipient=user).delete()
+                    Notification.objects.filter(sender=user).delete()
+                    print("🗑️ Deleted notifications")
+                except Exception as e:
+                    print(f"⚠️  Warning deleting notifications: {str(e)}")
+
+                # 2. Delete match requests (will cascade delete related notifications)
+                try:
+                    MatchRequest.objects.filter(from_user=user).delete()
+                    MatchRequest.objects.filter(to_user=user).delete()
+                    print("🗑️ Deleted match requests")
+                except Exception as e:
+                    print(f"⚠️  Warning deleting match requests: {str(e)}")
+
+                # 3. Delete contact info views
+                try:
+                    ContactInfoView.objects.filter(viewer=user).delete()
+                    ContactInfoView.objects.filter(viewed_user=user).delete()
+                    print("🗑️ Deleted contact info views")
+                except Exception as e:
+                    print(f"⚠️  Warning deleting contact info views: {str(e)}")
+
+                # 4. Delete success stories and their images
+                try:
+                    success_stories = SuccessStory.objects.filter(created_by=user)
+                    for story in success_stories:
+                        story.images.all().delete()
+                    success_stories.delete()
+                    print("🗑️ Deleted success stories")
+                except Exception as e:
+                    print(f"⚠️  Warning deleting success stories: {str(e)}")
+
+                # 5. Delete auth_api app related data
+                try:
+                    UserImage.objects.filter(user=user).delete()
+                    print("🗑️ Deleted user images")
+                except Exception as e:
+                    print(f"⚠️  Warning deleting user images: {str(e)}")
+
+                try:
+                    PersonalLifestyle.objects.filter(profile__user=user).delete()
+                    print("🗑️ Deleted personal lifestyle")
+                except Exception as e:
+                    print(f"⚠️  Warning deleting personal lifestyle: {str(e)}")
+
+                try:
+                    MatrimonyProfile.objects.filter(user=user).delete()
+                    print("🗑️ Deleted matrimony profile")
+                except Exception as e:
+                    print(f"⚠️  Warning deleting matrimony profile: {str(e)}")
+
+                try:
+                    SubscriptionPayment.objects.filter(user=user).delete()
+                    print("🗑️ Deleted subscription payments")
+                except Exception as e:
+                    print(f"⚠️  Warning deleting subscription payments: {str(e)}")
+
+                try:
+                    PhoneOTP.objects.filter(phone_number=phone_number).delete()
+                    print("🗑️ Deleted OTP records")
+                except Exception as e:
+                    print(f"⚠️  Warning deleting OTP records: {str(e)}")
+
+                # 6. Finally delete user account
+                try:
+                    user_email = user.email
+                    user.delete()
+                    print(f"🗑️ Deleted user account: {user_email}")
+                except Exception as e:
+                    print(f"❌ Error deleting user account: {str(e)}")
+                    raise
+
+        except Exception as e:
+            print(f"❌ Error deleting account: {str(e)}")
+            return self.error_response(
+                f"Error deleting account: {str(e)}",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        print("🎉 Account deleted successfully")
+        print("=" * 70 + "\n")
+
+        return self.success_response(
+            message="Account deleted successfully. All your data has been removed.",
+            status_code=status.HTTP_200_OK
+        )
+
 
 class CheckEmailExistsAPIView(APIView):
     permission_classes = [AllowAny]

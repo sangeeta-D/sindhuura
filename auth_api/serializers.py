@@ -8,6 +8,32 @@ from .models import *
 from django.utils import timezone
 import pytz
 from backend.models import Blog
+import re
+
+def format_phone_number(phone_number):
+    """
+    Format Indian phone number to +91XXXXXXXXXX format
+    Returns formatted phone or None if invalid
+    """
+    if not phone_number:
+        return None
+    
+    # Remove any spaces and dashes
+    phone = re.sub(r'[\s\-]', '', str(phone_number))
+    
+    # If it starts with +91 and is correct length
+    if phone.startswith('+91') and len(phone) == 13:
+        return phone
+    
+    # If it starts with 91 (without +)
+    if phone.startswith('91') and len(phone) == 12:
+        return f"+{phone}"
+    
+    # If it's 10 digits, add +91
+    if len(phone) == 10 and phone[0] in '6789':
+        return f"+91{phone}"
+    
+    return None
 
 class RegisterSerializer(serializers.Serializer):
 
@@ -130,6 +156,7 @@ class RegisterSerializer(serializers.Serializer):
         # Remove non-model fields
         validated_data.pop("confirm_password")
         password = validated_data.pop("password")
+        otp = validated_data.pop("otp", None)  # Remove OTP - not needed for profile creation
 
         # Pop USER-ONLY fields
         profile_image = validated_data.pop("profile_image", None)
@@ -543,3 +570,152 @@ class SendOTPSerializer(serializers.Serializer):
 class VerifyOTPSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=15)
     otp = serializers.CharField(max_length=6)
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    """
+    Request OTP for password reset via email or phone
+    """
+    email = serializers.EmailField(required=False, allow_blank=True)
+    phone_number = serializers.CharField(max_length=15, required=False, allow_blank=True)
+
+    def validate(self, data):
+        email = data.get("email")
+        phone_number = data.get("phone_number")
+
+        if not email and not phone_number:
+            raise serializers.ValidationError(
+                "Either email or phone_number is required"
+            )
+
+        if email:
+            if not User.objects.filter(email=email).exists():
+                raise serializers.ValidationError("Email not found")
+
+        if phone_number:
+            # Format phone number before lookup
+            formatted_phone = format_phone_number(phone_number)
+            if not formatted_phone:
+                raise serializers.ValidationError("Invalid phone number format")
+            
+            if not User.objects.filter(phone_number=formatted_phone).exists():
+                raise serializers.ValidationError("Phone number not found")
+            
+            # Update data with formatted phone number
+            data["phone_number"] = formatted_phone
+
+        return data
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    """
+    Reset password with OTP verification
+    """
+    email = serializers.EmailField(required=False, allow_blank=True)
+    phone_number = serializers.CharField(max_length=15, required=False, allow_blank=True)
+    otp = serializers.CharField(max_length=6)
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate(self, data):
+        email = data.get("email")
+        phone_number = data.get("phone_number")
+        otp = data.get("otp")
+        new_password = data.get("new_password")
+        confirm_password = data.get("confirm_password")
+
+        # Check if either email or phone is provided
+        if not email and not phone_number:
+            raise serializers.ValidationError(
+                "Either email or phone_number is required"
+            )
+
+        # Check if passwords match
+        if new_password != confirm_password:
+            raise serializers.ValidationError("Passwords do not match")
+
+        # Verify user exists
+        user = None
+        if email:
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                raise serializers.ValidationError("Email not found")
+
+        formatted_phone = None
+        if phone_number:
+            # Format phone number before lookup
+            formatted_phone = format_phone_number(phone_number)
+            if not formatted_phone:
+                raise serializers.ValidationError("Invalid phone number format")
+            
+            try:
+                user = User.objects.get(phone_number=formatted_phone)
+            except User.DoesNotExist:
+                raise serializers.ValidationError("Phone number not found")
+
+        # Verify OTP if phone number is provided
+        if formatted_phone:
+            try:
+                otp_obj = PhoneOTP.objects.get(
+                    phone_number=formatted_phone,
+                    is_verified=False  # Get unverified OTP (will verify during reset)
+                )
+            except PhoneOTP.DoesNotExist:
+                raise serializers.ValidationError("Invalid OTP request")
+
+            if otp_obj.is_expired():
+                raise serializers.ValidationError("OTP has expired")
+
+            if otp_obj.otp != otp:
+                raise serializers.ValidationError("Invalid OTP")
+
+        data["user"] = user
+        return data
+
+
+class DeleteAccountSerializer(serializers.Serializer):
+    """
+    Delete user account with OTP verification
+    """
+    phone_number = serializers.CharField(max_length=15, required=True)
+    otp = serializers.CharField(max_length=6, required=True)
+
+    def validate(self, data):
+        phone_number = data.get("phone_number")
+        otp = data.get("otp")
+
+        if not phone_number or not otp:
+            raise serializers.ValidationError(
+                "Phone number and OTP are required"
+            )
+
+        # Format phone number before lookup
+        formatted_phone = format_phone_number(phone_number)
+        if not formatted_phone:
+            raise serializers.ValidationError("Invalid phone number format")
+
+        # Verify user exists
+        try:
+            user = User.objects.get(phone_number=formatted_phone)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Phone number not found")
+
+        # Verify OTP
+        try:
+            otp_obj = PhoneOTP.objects.get(
+                phone_number=formatted_phone,
+                is_verified=False  # Get unverified OTP
+            )
+        except PhoneOTP.DoesNotExist:
+            raise serializers.ValidationError("Invalid OTP request")
+
+        if otp_obj.is_expired():
+            raise serializers.ValidationError("OTP has expired")
+
+        if otp_obj.otp != otp:
+            raise serializers.ValidationError("Invalid OTP")
+
+        data["user"] = user
+        data["formatted_phone"] = formatted_phone
+        return data

@@ -429,3 +429,41 @@ class UserReportCreateSerializer(serializers.ModelSerializer):
             reason=reason,
             description=validated_data.get("description", "")
         )
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    """Serializer for Notifications"""
+    sender_name = serializers.CharField(source="sender.name", read_only=True, allow_null=True)
+    sender_id = serializers.IntegerField(source="sender.id", read_only=True, allow_null=True)
+    created_at = serializers.SerializerMethodField()
+    message = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Notification
+        fields = (
+            "id",
+            "notification_type",
+            "title",
+            "message",
+            "sender_id",
+            "sender_name",
+            "is_read",
+            "created_at",
+            "match_request",
+        )
+    
+    def get_created_at(self, obj):
+        return to_ist(obj.created_at)
+    
+    def get_message(self, obj):
+        """Generate message with sender name instead of 'someone'"""
+        sender_name = obj.sender.name if obj.sender else "Someone"
+        
+        if obj.notification_type == "match_request":
+            return f"{sender_name} sent you a match request"
+        elif obj.notification_type == "match_accepted":
+            return f"{sender_name} accepted your match request"
+        elif obj.notification_type == "match_rejected":
+            return f"{sender_name} rejected your match request"
+        else:
+            return obj.message

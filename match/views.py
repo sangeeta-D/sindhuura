@@ -728,3 +728,47 @@ class UserReportCreateAPIView(APIView, APIResponseMixin):
             },
             status_code=drf_status.HTTP_201_CREATED
         )
+
+
+class NotificationListAPIView(APIResponseMixin, APIView):
+    """
+    GET: Fetch all notifications for the authenticated user with pagination
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            user = request.user
+            
+            # Get notifications for the user
+            notifications = Notification.objects.filter(
+                recipient=user
+            ).select_related('sender', 'match_request').order_by('-created_at')
+
+            # Pagination
+            from auth_api.pagination import BlogPagination
+            paginator = BlogPagination()
+            paginated_notifications = paginator.paginate_queryset(notifications, request)
+
+            serializer = NotificationSerializer(
+                paginated_notifications,
+                many=True,
+                context={"request": request}
+            )
+
+            return self.success_response(
+                message="Notifications fetched successfully",
+                data={
+                    "count": notifications.count(),
+                    "next": paginator.get_next_link(),
+                    "previous": paginator.get_previous_link(),
+                    "results": serializer.data
+                },
+                status_code=drf_status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            return self.error_response(
+                str(e),
+                status_code=drf_status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
