@@ -142,10 +142,6 @@ class RegisterSerializer(serializers.Serializer):
                 "Children count required for married profiles"
             )
 
-        # OTP presence is checked in view, but ensure it's present
-        if not data.get("otp"):
-            raise serializers.ValidationError({"otp": "OTP is required."})
-
         return data
 
     # 🔥 ATOMIC CREATE
