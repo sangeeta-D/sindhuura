@@ -375,15 +375,25 @@ class RevealUserFullDetailAPIView(APIView, APIResponseMixin):
         viewer = request.user
         viewed_user = get_object_or_404(CustomUser, id=user_id)
 
+        # ✅ 0️⃣ Prevent viewing own profile
+        if viewer.id == viewed_user.id:
+            return self.error_response(
+                "You cannot view your own contact details.",
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        # ✅ 0️⃣ Prevent viewing deleted accounts
+        if viewed_user.is_deleted:
+            return self.error_response(
+                "This user account has been deleted.",
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+
         # ✅ 1️⃣ Check if user is subscribed
         if not viewer.is_subscribed:
-            return self.success_response(
-                message="Please upgrade your plan",
-                data={
-                    "upgrade_required": True,
-                    "limit_reached": False
-                },
-                status_code=status.HTTP_200_OK
+            return self.error_response(
+                "You are not subscribed. Please upgrade your plan to view contact details.",
+                status_code=status.HTTP_403_FORBIDDEN
             )
 
         # ✅ 2️⃣ Check subscription expiry (safe check for None)
@@ -391,56 +401,42 @@ class RevealUserFullDetailAPIView(APIView, APIResponseMixin):
             viewer.is_subscribed = False
             viewer.save(update_fields=["is_subscribed"])
 
-            return self.success_response(
-                message="Your subscription has expired. Please upgrade your plan.",
-                data={
-                    "upgrade_required": True,
-                    "limit_reached": False
-                },
-                status_code=status.HTTP_200_OK
+            return self.error_response(
+                "Your subscription has expired. Please upgrade your plan to view contact details.",
+                status_code=status.HTTP_403_FORBIDDEN
             )
 
         # ✅ 3️⃣ Get active successful subscription payment
         payment = SubscriptionPayment.objects.filter(
             user=viewer,
             payment_status="success"
-        ).select_related("subscription").first()
+        ).select_related("subscription").order_by("-created_at").first()
 
         if not payment or not payment.subscription:
-            return self.success_response(
-                message="Please upgrade your plan",
-                data={
-                    "upgrade_required": True,
-                    "limit_reached": False
-                },
-                status_code=status.HTTP_200_OK
+            return self.error_response(
+                "No active subscription found. Please upgrade your plan to view contact details.",
+                status_code=status.HTTP_403_FORBIDDEN
             )
 
         reveal_limit = payment.subscription.reveal_limit
 
-        # ✅ 4️⃣ Check if already viewed (NO increment)
-        already_viewed = ContactInfoView.objects.filter(
+        # ✅ 4️⃣ Check if already viewed
+        contact_view = ContactInfoView.objects.filter(
             viewer=viewer,
             viewed_user=viewed_user
-        ).exists()
+        ).first()
 
         # ✅ 5️⃣ If new profile → check limit
-        if not already_viewed:
+        if not contact_view:
 
             if viewer.profile_reveal_count >= reveal_limit:
-                return self.success_response(
-                    message="Profile reveal limit reached.",
-                    data={
-                        "upgrade_required": False,
-                        "limit_reached": True,
-                        "current_count": viewer.profile_reveal_count,
-                        "limit": reveal_limit
-                    },
-                    status_code=status.HTTP_200_OK
+                return self.error_response(
+                    f"Profile reveal limit reached. You can view {reveal_limit} profiles. Upgrade your plan for more.",
+                    status_code=status.HTTP_403_FORBIDDEN
                 )
 
             # Increment only once for new profile
-            ContactInfoView.objects.create(
+            contact_view = ContactInfoView.objects.create(
                 viewer=viewer,
                 viewed_user=viewed_user,
                 views_count=1
@@ -448,6 +444,10 @@ class RevealUserFullDetailAPIView(APIView, APIResponseMixin):
 
             viewer.profile_reveal_count += 1
             viewer.save(update_fields=["profile_reveal_count"])
+        else:
+            # ✅ Update views_count for repeated views
+            contact_view.views_count += 1
+            contact_view.save(update_fields=["views_count"])
 
         # ✅ 6️⃣ Serialize sensitive details
         serializer = RevealUserDetailsSerializer(viewed_user)
@@ -456,10 +456,9 @@ class RevealUserFullDetailAPIView(APIView, APIResponseMixin):
             message="Sensitive details revealed successfully",
             data={
                 **serializer.data,
-                "upgrade_required": False,
-                "limit_reached": False,
                 "current_count": viewer.profile_reveal_count,
-                "limit": reveal_limit
+                "limit": reveal_limit,
+                "is_first_view": contact_view.views_count == 1
             },
             status_code=status.HTTP_200_OK
         )
