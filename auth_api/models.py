@@ -84,6 +84,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         blank=True
     )
 
+    is_subscribed = models.BooleanField(default=False, db_index=True)
+    profile_reveal_count = models.PositiveIntegerField(default=0)
+    subscription_expires_at = models.DateTimeField(null=True, blank=True)
+
     objects = CustomUserManager()
 
     USERNAME_FIELD = "email"

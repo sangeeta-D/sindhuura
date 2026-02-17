@@ -20,6 +20,7 @@
               <th>Plan</th>
               <th>Price (₹)</th>
               <th>Validity (Days)</th>
+              <th>Reveal Limit</th>
               <th>Status</th>
               <th width="120">Actions</th>
             </tr>
@@ -33,6 +34,7 @@
               </td>
               <td>{{ plan.price }}</td>
               <td>{{ plan.validity }}</td>
+              <td>{{ plan.reveal_limit }}</td>
               <td>
                 {% if plan.is_active %}
                   <span class="badge bg-success">Active</span>
@@ -42,7 +44,15 @@
               </td>
               <td>
                 <button class="btn btn-sm btn-outline-primary"
-                        onclick="openEditModal('{{ plan.id }}','{{ plan.plan_name }}','{{ plan.price }}','{{ plan.validity }}','{{ plan.description|escapejs }}','{{ plan.is_active }}')">
+                        onclick="openEditModal(
+                          '{{ plan.id }}',
+                          '{{ plan.plan_name }}',
+                          '{{ plan.price }}',
+                          '{{ plan.validity }}',
+                          '{{ plan.reveal_limit }}',
+                          '{{ plan.description|escapejs }}',
+                          '{{ plan.is_active }}'
+                        )">
                   <i class="bx bx-edit"></i>
                 </button>
 
@@ -54,7 +64,7 @@
             </tr>
             {% empty %}
             <tr>
-              <td colspan="5" class="text-center text-muted">
+              <td colspan="6" class="text-center text-muted">
                 No subscription plans added
               </td>
             </tr>
@@ -98,14 +108,31 @@
           <input type="number" name="validity" id="validityField" class="form-control" required>
         </div>
 
+        <div class="col-md-3">
+          <label class="form-label">Reveal Limit</label>
+          <input type="number"
+                 name="reveal_limit"
+                 id="revealLimitField"
+                 class="form-control"
+                 min="0"
+                 required>
+        </div>
+
         <div class="col-md-12">
           <label class="form-label">Description</label>
-          <textarea name="description" id="descriptionField" class="form-control" rows="3"></textarea>
+          <textarea name="description"
+                    id="descriptionField"
+                    class="form-control"
+                    rows="3"></textarea>
         </div>
 
         <div class="col-md-12">
           <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="is_active" id="isActiveField" checked>
+            <input class="form-check-input"
+                   type="checkbox"
+                   name="is_active"
+                   id="isActiveField"
+                   checked>
             <label class="form-check-label">Active</label>
           </div>
         </div>
@@ -126,6 +153,7 @@
 </div>
 
 <script>
+
 function openAddModal() {
   document.getElementById("modalTitle").innerText = "Add Plan"
   document.getElementById("actionField").value = "add"
@@ -133,19 +161,21 @@ function openAddModal() {
   document.getElementById("planNameField").value = ""
   document.getElementById("priceField").value = ""
   document.getElementById("validityField").value = ""
+  document.getElementById("revealLimitField").value = ""
   document.getElementById("descriptionField").value = ""
   document.getElementById("isActiveField").checked = true
 
   new bootstrap.Modal(document.getElementById("planModal")).show()
 }
 
-function openEditModal(id, name, price, validity, description, isActive) {
+function openEditModal(id, name, price, validity, revealLimit, description, isActive) {
   document.getElementById("modalTitle").innerText = "Edit Plan"
   document.getElementById("actionField").value = "edit"
   document.getElementById("planIdField").value = id
   document.getElementById("planNameField").value = name
   document.getElementById("priceField").value = price
   document.getElementById("validityField").value = validity
+  document.getElementById("revealLimitField").value = revealLimit
   document.getElementById("descriptionField").value = description
   document.getElementById("isActiveField").checked = isActive === "True"
 
@@ -165,6 +195,7 @@ function deletePlan(id) {
   document.body.appendChild(form)
   form.submit()
 }
+
 </script>
 
 {% endblock %}

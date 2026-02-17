@@ -97,6 +97,8 @@ class SubscriptionPlan(models.Model):
         auto_now=True
     )
 
+    reveal_limit = models.PositiveIntegerField(default=0)
+
     class Meta:
         ordering = ["price"]
         verbose_name = "Subscription Plan"

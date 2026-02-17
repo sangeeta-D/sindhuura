@@ -368,93 +368,76 @@ class UserFullDetailAPIView(APIView, APIResponseMixin):
         )
 
 class RevealUserFullDetailAPIView(APIView, APIResponseMixin):
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, user_id):
 
-        if not request.user.is_authenticated:
-            return self.error_response(
-                message="Authentication required",
-                status_code=status.HTTP_401_UNAUTHORIZED
-            )
-
+        viewer = request.user
         viewed_user = get_object_or_404(CustomUser, id=user_id)
 
+        # ✅ Check subscription boolean
+        if not viewer.is_subscribed:
+            return self.success_response(
+                message="You are not subscribed.",
+                data={"limit_reached": False},
+                status_code=status.HTTP_200_OK
+            )
+
+        # ✅ Check expiry
+        if viewer.subscription_expires_at < timezone.now():
+            viewer.is_subscribed = False
+            viewer.save(update_fields=["is_subscribed"])
+
+            return self.success_response(
+                message="Your subscription has expired.",
+                data={"limit_reached": False},
+                status_code=status.HTTP_200_OK
+            )
+
+        # ✅ Get user's active plan
         payment = SubscriptionPayment.objects.filter(
-            user=request.user,
+            user=viewer,
             payment_status="success"
-        ).order_by("-paid_at").first()
+        ).select_related("subscription").first()
 
-        if not payment or not payment.paid_at:
-            return self.success_response(
-                message="You are not subscribed. Please purchase a subscription to reveal contact details.",
-                data={"is_subscribed": False},
-                status_code=status.HTTP_200_OK
-            )
+        reveal_limit = payment.subscription.reveal_limit
 
-        expiry_date = payment.paid_at + timedelta(
-            days=payment.subscription.validity
-        )
+        # ✅ Check if already viewed (NO increment)
+        already_viewed = ContactInfoView.objects.filter(
+            viewer=viewer,
+            viewed_user=viewed_user
+        ).exists()
 
-        if expiry_date < timezone.now():
-            return self.success_response(
-                message="Your subscription has expired. Please renew to continue.",
-                data={"is_subscribed": False},
-                status_code=status.HTTP_200_OK
-            )
+        # ✅ If new profile, check limit
+        if not already_viewed:
 
-        plan_name = payment.subscription.plan_name.lower()
-        subscription_plan = None
-        subscription_limit = 0
+            if viewer.profile_reveal_count >= reveal_limit:
+                return self.success_response(
+                    message="Profile reveal limit reached.",
+                    data={"limit_reached": True},
+                    status_code=status.HTTP_200_OK
+                )
 
-        if "silver" in plan_name:
-            subscription_plan = "silver"
-            subscription_limit = 27
-        elif "prime" in plan_name or "gold" in plan_name:
-            subscription_plan = "prime_gold"
-            subscription_limit = 45
-        elif "diamond" in plan_name:
-            subscription_plan = "diamond"
-            subscription_limit = 120
-
-        # 🔹 UNIQUE view tracking (NO repeated increment)
-        if request.user != viewed_user:
-            contact_view, created = ContactInfoView.objects.get_or_create(
-                viewer=request.user,
+            # Increment only once for new profile
+            ContactInfoView.objects.create(
+                viewer=viewer,
                 viewed_user=viewed_user,
-                defaults={"views_count": 1}
+                views_count=1
             )
 
-            if not created:
-                contact_view.views_count += 1
-                contact_view.save(update_fields=["views_count", "last_viewed_at"])
-        else:
-            contact_view = None
-
-        views_count = contact_view.views_count if contact_view else 0
-        contact_limit_reached = views_count >= subscription_limit
-
-        # 🔹 Check if contact limit has been reached
-        if contact_limit_reached:
-            return self.error_response(
-                message=f"You have reached your contact view limit ({views_count}/{subscription_limit}) for your {subscription_plan} subscription plan.",
-                status_code=status.HTTP_403_FORBIDDEN
-            )
+            viewer.profile_reveal_count += 1
+            viewer.save(update_fields=["profile_reveal_count"])
 
         serializer = RevealUserDetailsSerializer(viewed_user)
 
-        response_data = {
-            **serializer.data,
-            "is_subscribed": True,
-            "subscription_plan": subscription_plan,
-            "contact_limit": subscription_limit,
-            "views_count": views_count,
-            "contact_limit_reached": contact_limit_reached,
-        }
-
         return self.success_response(
             message="Sensitive details revealed successfully",
-            data=response_data,
+            data={
+                **serializer.data,
+                "current_count": viewer.profile_reveal_count,
+                "limit": reveal_limit,
+                "limit_reached": False
+            },
             status_code=status.HTTP_200_OK
         )
 

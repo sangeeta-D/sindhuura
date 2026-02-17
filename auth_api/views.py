@@ -357,13 +357,15 @@ class CreateSubscriptionOrderAPIView(APIView, APIResponseMixin):
 class VerifySubscriptionPaymentAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request):
+
         razorpay_order_id = request.data.get("razorpay_order_id")
         razorpay_payment_id = request.data.get("razorpay_payment_id")
         razorpay_signature = request.data.get("razorpay_signature")
 
         try:
-            payment = SubscriptionPayment.objects.get(
+            payment = SubscriptionPayment.objects.select_related("subscription").get(
                 transaction_id=razorpay_order_id,
                 user=request.user
             )
@@ -374,6 +376,7 @@ class VerifySubscriptionPaymentAPIView(APIView, APIResponseMixin):
             auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
         )
 
+        # ✅ Verify Razorpay signature
         try:
             client.utility.verify_payment_signature({
                 "razorpay_order_id": razorpay_order_id,
@@ -382,25 +385,40 @@ class VerifySubscriptionPaymentAPIView(APIView, APIResponseMixin):
             })
         except razorpay.errors.SignatureVerificationError:
             payment.payment_status = "failed"
-            payment.save()
+            payment.save(update_fields=["payment_status"])
             return self.error_response("Payment verification failed")
 
+        # ✅ Mark payment success
         payment.payment_status = "success"
         payment.paid_at = timezone.now()
         payment.expires_at = payment.paid_at + timedelta(
             days=payment.subscription.validity
         )
-        payment.save()
+        payment.save(update_fields=["payment_status", "paid_at", "expires_at"])
+
+        # ✅ ACTIVATE SUBSCRIPTION
+        user = payment.user
+        expiry = payment.expires_at
+
+        user.is_subscribed = True
+        user.subscription_expires_at = expiry
+        user.profile_reveal_count = 0  # Reset reveal count for new plan
+        user.save(update_fields=[
+            "is_subscribed",
+            "subscription_expires_at",
+            "profile_reveal_count"
+        ])
 
         return self.success_response(
-            message="Payment verified successfully",
+            message="Payment verified and subscription activated successfully",
             data={
                 "payment_id": payment.id,
                 "status": payment.payment_status,
-                "paid_at": payment.paid_at
+                "plan": payment.subscription.plan_name,
+                "expires_at": expiry,
+                "reveal_limit": payment.subscription.reveal_limit
             }
         )
-
 # user profile API
 class MatrimonyProfileAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]

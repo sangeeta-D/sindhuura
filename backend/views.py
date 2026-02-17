@@ -267,6 +267,7 @@ def subscription_plans(request):
             price = request.POST.get("price")
             validity = request.POST.get("validity")
             description = request.POST.get("description")
+            reveal_limit = request.POST.get("reveal_limit")
             is_active = request.POST.get("is_active") == "on"
 
             if action == "add":
@@ -275,6 +276,7 @@ def subscription_plans(request):
                     price=price,
                     validity=validity,
                     description=description,
+                    reveal_limit=reveal_limit,
                     is_active=is_active
                 )
                 messages.success(request, "Subscription plan added successfully")
@@ -285,6 +287,7 @@ def subscription_plans(request):
                 plan.price = price
                 plan.validity = validity
                 plan.description = description
+                plan.reveal_limit = reveal_limit
                 plan.is_active = is_active
                 plan.save()
 
