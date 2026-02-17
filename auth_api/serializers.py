@@ -145,6 +145,7 @@ class RegisterSerializer(serializers.Serializer):
         return data
 
     # 🔥 ATOMIC CREATE
+    
     @transaction.atomic
     def create(self, validated_data):
 

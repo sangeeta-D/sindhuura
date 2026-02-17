@@ -426,12 +426,20 @@ class RevealUserFullDetailAPIView(APIView, APIResponseMixin):
             )
 
             if not created:
-                contact_view.save(update_fields=["last_viewed_at"])
+                contact_view.views_count += 1
+                contact_view.save(update_fields=["views_count", "last_viewed_at"])
         else:
             contact_view = None
 
         views_count = contact_view.views_count if contact_view else 0
         contact_limit_reached = views_count >= subscription_limit
+
+        # 🔹 Check if contact limit has been reached
+        if contact_limit_reached:
+            return self.error_response(
+                message=f"You have reached your contact view limit ({views_count}/{subscription_limit}) for your {subscription_plan} subscription plan.",
+                status_code=status.HTTP_403_FORBIDDEN
+            )
 
         serializer = RevealUserDetailsSerializer(viewed_user)
 
