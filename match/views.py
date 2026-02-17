@@ -375,46 +375,67 @@ class RevealUserFullDetailAPIView(APIView, APIResponseMixin):
         viewer = request.user
         viewed_user = get_object_or_404(CustomUser, id=user_id)
 
-        # ✅ Check subscription boolean
+        # ✅ 1️⃣ Check if user is subscribed
         if not viewer.is_subscribed:
             return self.success_response(
-                message="You are not subscribed.",
-                data={"limit_reached": False},
+                message="Please upgrade your plan",
+                data={
+                    "upgrade_required": True,
+                    "limit_reached": False
+                },
                 status_code=status.HTTP_200_OK
             )
 
-        # ✅ Check expiry
-        if viewer.subscription_expires_at < timezone.now():
+        # ✅ 2️⃣ Check subscription expiry (safe check for None)
+        if viewer.subscription_expires_at and viewer.subscription_expires_at < timezone.now():
             viewer.is_subscribed = False
             viewer.save(update_fields=["is_subscribed"])
 
             return self.success_response(
-                message="Your subscription has expired.",
-                data={"limit_reached": False},
+                message="Your subscription has expired. Please upgrade your plan.",
+                data={
+                    "upgrade_required": True,
+                    "limit_reached": False
+                },
                 status_code=status.HTTP_200_OK
             )
 
-        # ✅ Get user's active plan
+        # ✅ 3️⃣ Get active successful subscription payment
         payment = SubscriptionPayment.objects.filter(
             user=viewer,
             payment_status="success"
         ).select_related("subscription").first()
 
+        if not payment or not payment.subscription:
+            return self.success_response(
+                message="Please upgrade your plan",
+                data={
+                    "upgrade_required": True,
+                    "limit_reached": False
+                },
+                status_code=status.HTTP_200_OK
+            )
+
         reveal_limit = payment.subscription.reveal_limit
 
-        # ✅ Check if already viewed (NO increment)
+        # ✅ 4️⃣ Check if already viewed (NO increment)
         already_viewed = ContactInfoView.objects.filter(
             viewer=viewer,
             viewed_user=viewed_user
         ).exists()
 
-        # ✅ If new profile, check limit
+        # ✅ 5️⃣ If new profile → check limit
         if not already_viewed:
 
             if viewer.profile_reveal_count >= reveal_limit:
                 return self.success_response(
                     message="Profile reveal limit reached.",
-                    data={"limit_reached": True},
+                    data={
+                        "upgrade_required": False,
+                        "limit_reached": True,
+                        "current_count": viewer.profile_reveal_count,
+                        "limit": reveal_limit
+                    },
                     status_code=status.HTTP_200_OK
                 )
 
@@ -428,20 +449,20 @@ class RevealUserFullDetailAPIView(APIView, APIResponseMixin):
             viewer.profile_reveal_count += 1
             viewer.save(update_fields=["profile_reveal_count"])
 
+        # ✅ 6️⃣ Serialize sensitive details
         serializer = RevealUserDetailsSerializer(viewed_user)
 
         return self.success_response(
             message="Sensitive details revealed successfully",
             data={
                 **serializer.data,
+                "upgrade_required": False,
+                "limit_reached": False,
                 "current_count": viewer.profile_reveal_count,
-                "limit": reveal_limit,
-                "limit_reached": False
+                "limit": reveal_limit
             },
             status_code=status.HTTP_200_OK
         )
-
-
 # accept match request
 class AcceptMatchRequestAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
