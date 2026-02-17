@@ -389,6 +389,9 @@ class RevealUserFullDetailAPIView(APIView, APIResponseMixin):
                 status_code=status.HTTP_404_NOT_FOUND
             )
 
+        # ✅ DEBUG: Log subscription details
+        print(f"DEBUG: User {viewer.email} - is_subscribed: {viewer.is_subscribed}, expires_at: {viewer.subscription_expires_at}")
+
         # ✅ 1️⃣ Check if user is subscribed
         if not viewer.is_subscribed:
             return self.error_response(
@@ -398,6 +401,7 @@ class RevealUserFullDetailAPIView(APIView, APIResponseMixin):
 
         # ✅ 2️⃣ Check subscription expiry (safe check for None)
         if viewer.subscription_expires_at and viewer.subscription_expires_at < timezone.now():
+            print(f"DEBUG: Subscription expired for {viewer.email}")
             viewer.is_subscribed = False
             viewer.save(update_fields=["is_subscribed"])
 
@@ -412,9 +416,24 @@ class RevealUserFullDetailAPIView(APIView, APIResponseMixin):
             payment_status="success"
         ).select_related("subscription").order_by("-created_at").first()
 
+        print(f"DEBUG: Payment found: {payment}")
+        if payment:
+            print(f"DEBUG: Payment expires_at: {payment.expires_at}, Subscription: {payment.subscription}")
+
         if not payment or not payment.subscription:
             return self.error_response(
                 "No active subscription found. Please upgrade your plan to view contact details.",
+                status_code=status.HTTP_403_FORBIDDEN
+            )
+
+        # ✅ 3.5️⃣ Check if payment itself has expired
+        if payment.expires_at and payment.expires_at < timezone.now():
+            print(f"DEBUG: Payment expired at {payment.expires_at}")
+            viewer.is_subscribed = False
+            viewer.save(update_fields=["is_subscribed"])
+            
+            return self.error_response(
+                "Your subscription has expired. Please upgrade your plan to view contact details.",
                 status_code=status.HTTP_403_FORBIDDEN
             )
 
