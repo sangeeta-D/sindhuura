@@ -351,32 +351,26 @@ def user_list(request):
     })
 
 def user_details(request, user_id):
-    from datetime import timedelta
-    
+
     user = (
         CustomUser.objects
         .select_related("profile", "profile__lifestyle")
         .prefetch_related("user_images")
         .get(id=user_id)
     )
-    
-    # Fetch active or latest subscription payment
-    subscription = SubscriptionPayment.objects.filter(
-        user=user,
-        payment_status='success'
-    ).select_related('subscription').first()
-    
-    # ✅ Calculate expiry date if expires_at is NULL
-    if subscription and not subscription.expires_at and subscription.created_at:
-        subscription.calculated_expiry = subscription.created_at + timedelta(days=subscription.subscription.validity)
-        subscription.is_expired = subscription.calculated_expiry < timezone.now()
-    elif subscription and subscription.expires_at:
-        subscription.calculated_expiry = subscription.expires_at
-        subscription.is_expired = subscription.expires_at < timezone.now()
-    
+
+    subscription = (
+        SubscriptionPayment.objects
+        .filter(user=user, payment_status='success')
+        .select_related('subscription')
+        .order_by('-paid_at')
+        .first()
+    )
+
     return render(request, "user_details.html", {
         "user": user,
-        "subscription": subscription
+        "subscription": subscription,
+        "now": timezone.now(),
     })
 
   # Only admins can toggle
