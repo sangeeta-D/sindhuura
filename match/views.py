@@ -371,6 +371,7 @@ class RevealUserFullDetailAPIView(APIView, APIResponseMixin):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, user_id):
+        print("VIEW EXECUTED")
 
         viewer = request.user
         viewed_user = get_object_or_404(CustomUser, id=user_id)
