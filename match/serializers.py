@@ -174,6 +174,7 @@ class PaidUserImageSerializer(serializers.ModelSerializer):
         model = UserImage
         fields = ["id", "image", "uploaded_at"]
 
+
 class PaidHoroscopeSerializer(serializers.ModelSerializer):
     class Meta:
         model = PersonalLifestyle
@@ -194,8 +195,8 @@ class RevealUserDetailsSerializer(serializers.ModelSerializer):
         fields = [
             "email",
             "phone_number",
-            "user_images",
-            "horoscope",
+            "user_images",   # ✅ Extra images
+            "horoscope",     # ✅ Horoscope details
         ]
 
     def get_horoscope(self, obj):
@@ -204,7 +205,6 @@ class RevealUserDetailsSerializer(serializers.ModelSerializer):
             return PaidHoroscopeSerializer(lifestyle).data
         except AttributeError:
             return None
-
 
 
 class SuccessStoryImageSerializer(serializers.ModelSerializer):
