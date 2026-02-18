@@ -37,7 +37,6 @@
 
         <div class="row">
           <div class="col-md-3"><strong>Phone:</strong> {{ user.phone_number|default:"—" }}</div>
-          <div class="col-md-3"><strong>Email Verified:</strong> {{ user.is_email_verified|yesno:"Yes,No" }}</div>
           <div class="col-md-3"><strong>Joined:</strong> {{ user.date_joined|date:"d M Y" }}</div>
 
           <!-- Toggle Verification -->
@@ -75,8 +74,12 @@
           <div class="col-md-3">
             <strong>Expiry Date:</strong> 
             <p class="mb-0">
-              {% if subscription.expires_at %}
-                {{ subscription.expires_at|date:"d M Y" }}
+              {% if subscription.calculated_expiry %}
+                {{ subscription.calculated_expiry|date:\"d M Y\" }}
+                <br>
+                <small class=\"badge {% if subscription.is_expired %}bg-danger{% else %}bg-success{% endif %}\">
+                  {% if subscription.is_expired %}Expired{% else %}Active{% endif %}
+                </small>
               {% else %}
                 <span class="text-muted">—</span>
               {% endif %}

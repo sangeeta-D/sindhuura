@@ -15,6 +15,7 @@ from match.models import SuccessStory
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt  # Only if you don't use csrf token in JS
 from django.contrib.admin.views.decorators import staff_member_required
+from django.utils import timezone
 import json
 from django.shortcuts import render, redirect
 from django.contrib.auth.tokens import default_token_generator
@@ -350,6 +351,8 @@ def user_list(request):
     })
 
 def user_details(request, user_id):
+    from datetime import timedelta
+    
     user = (
         CustomUser.objects
         .select_related("profile", "profile__lifestyle")
@@ -362,6 +365,14 @@ def user_details(request, user_id):
         user=user,
         payment_status='success'
     ).select_related('subscription').order_by('-paid_at').first()
+    
+    # ✅ Calculate expiry date if expires_at is NULL
+    if subscription and not subscription.expires_at and subscription.created_at:
+        subscription.calculated_expiry = subscription.created_at + timedelta(days=subscription.subscription.validity)
+        subscription.is_expired = subscription.calculated_expiry < timezone.now()
+    elif subscription and subscription.expires_at:
+        subscription.calculated_expiry = subscription.expires_at
+        subscription.is_expired = subscription.expires_at < timezone.now()
     
     return render(request, "user_details.html", {
         "user": user,
@@ -723,6 +734,8 @@ def delete_success_story(request, story_id):
     return redirect("success_stories")
 
 def revenue(request):
+    import pytz
+    
     selected_month = request.GET.get("month")
     from_date = request.GET.get("from_date")
     to_date = request.GET.get("to_date")
@@ -749,6 +762,17 @@ def revenue(request):
     if to_date:
         to_dt = make_aware(datetime.strptime(to_date, "%Y-%m-%d"))
         payments = payments.filter(created_at__lte=to_dt)
+
+    # ✅ Convert all payment times to IST
+    ist = pytz.timezone('Asia/Kolkata')
+    for payment in payments:
+        if payment.created_at:
+            # Convert UTC to IST
+            if timezone.is_naive(payment.created_at):
+                aware_time = timezone.make_aware(payment.created_at, timezone.utc)
+            else:
+                aware_time = payment.created_at
+            payment.created_at_ist = aware_time.astimezone(ist)
 
     # Statistics
     total_revenue = payments.filter(
