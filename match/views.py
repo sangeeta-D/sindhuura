@@ -375,87 +375,77 @@ class RevealUserFullDetailAPIView(APIView, APIResponseMixin):
         viewer = request.user
         viewed_user = get_object_or_404(CustomUser, id=user_id)
 
-        # ✅ 0️⃣ Prevent viewing own profile
+        # ✅ Prevent viewing own profile
         if viewer.id == viewed_user.id:
             return self.error_response(
                 "You cannot view your own contact details.",
                 status_code=status.HTTP_400_BAD_REQUEST
             )
 
-        # ✅ 0️⃣ Prevent viewing deleted accounts
+        # ✅ Prevent viewing deleted accounts
         if viewed_user.is_deleted:
             return self.error_response(
                 "This user account has been deleted.",
                 status_code=status.HTTP_404_NOT_FOUND
             )
 
-        # ✅ DEBUG: Log subscription details
-        print(f"DEBUG: User {viewer.email} - is_subscribed: {viewer.is_subscribed}, expires_at: {viewer.subscription_expires_at}")
+        # =====================================================
+        # ✅ SUBSCRIPTION VALIDATION (ONLY FROM AUTH MODEL)
+        # =====================================================
 
-        # ✅ 1️⃣ Check if user is subscribed
+        # 1️⃣ Must be subscribed
         if not viewer.is_subscribed:
             return self.error_response(
-                "You are not subscribed. Please upgrade your plan to view contact details.",
+                "Please upgrade your plan to view contact details.",
                 status_code=status.HTTP_403_FORBIDDEN
             )
 
-        # ✅ 3️⃣ Get active successful subscription payment
+        # 2️⃣ Must not be expired
+        if viewer.subscription_expires_at:
+            if viewer.subscription_expires_at < timezone.now():
+                viewer.is_subscribed = False
+                viewer.save(update_fields=["is_subscribed"])
+
+                return self.error_response(
+                    "Your subscription has expired. Please upgrade your plan.",
+                    status_code=status.HTTP_403_FORBIDDEN
+                )
+
+        # =====================================================
+        # ✅ GET ACTIVE PLAN (Only for reveal_limit)
+        # =====================================================
+
         payment = SubscriptionPayment.objects.filter(
             user=viewer,
             payment_status="success"
-        ).select_related("subscription").order_by("-created_at").first()
-
-        print(f"DEBUG: Payment found: {payment}")
-        if payment:
-            print(f"DEBUG: Payment created_at: {payment.created_at}, expires_at: {payment.expires_at}, Subscription validity: {payment.subscription.validity}")
+        ).select_related("subscription").first()
 
         if not payment or not payment.subscription:
             return self.error_response(
-                "No active subscription found. Please upgrade your plan to view contact details.",
+                "No active subscription plan found.",
                 status_code=status.HTTP_403_FORBIDDEN
             )
 
-        subscription_plan = payment.subscription
-        
-        # ✅ 3.5️⃣ Calculate if subscription is still valid
-        # If expires_at is NULL, calculate from created_at + validity days
-        if payment.expires_at:
-            is_expired = payment.expires_at < timezone.now()
-            print(f"DEBUG: Payment expires_at is set. Expired: {is_expired}")
-        else:
-            # Calculate from created_at + validity days
-            expiry_date = payment.created_at + timedelta(days=subscription_plan.validity)
-            is_expired = expiry_date < timezone.now()
-            print(f"DEBUG: Payment expires_at is NULL. Calculated expiry: {expiry_date}, Expired: {is_expired}")
-        
-        if is_expired:
-            print(f"DEBUG: Subscription expired for {viewer.email}")
-            viewer.is_subscribed = False
-            viewer.save(update_fields=["is_subscribed"])
-            
-            return self.error_response(
-                "Your subscription has expired. Please upgrade your plan to view contact details.",
-                status_code=status.HTTP_403_FORBIDDEN
-            )
+        reveal_limit = payment.subscription.reveal_limit
 
-        reveal_limit = subscription_plan.reveal_limit
+        # =====================================================
+        # ✅ CHECK REVEAL LIMIT
+        # =====================================================
 
-        # ✅ 4️⃣ Check if already viewed
         contact_view = ContactInfoView.objects.filter(
             viewer=viewer,
             viewed_user=viewed_user
         ).first()
 
-        # ✅ 5️⃣ If new profile → check limit
+        # New profile view
         if not contact_view:
 
             if viewer.profile_reveal_count >= reveal_limit:
                 return self.error_response(
-                    f"Profile reveal limit reached. You can view {reveal_limit} profiles. Upgrade your plan for more.",
+                    f"Profile reveal limit reached. You can view only {reveal_limit} profiles.",
                     status_code=status.HTTP_403_FORBIDDEN
                 )
 
-            # Increment only once for new profile
             contact_view = ContactInfoView.objects.create(
                 viewer=viewer,
                 viewed_user=viewed_user,
@@ -464,12 +454,16 @@ class RevealUserFullDetailAPIView(APIView, APIResponseMixin):
 
             viewer.profile_reveal_count += 1
             viewer.save(update_fields=["profile_reveal_count"])
+
         else:
-            # ✅ Update views_count for repeated views
+            # Increase count for tracking
             contact_view.views_count += 1
             contact_view.save(update_fields=["views_count"])
 
-        # ✅ 6️⃣ Serialize sensitive details
+        # =====================================================
+        # ✅ RETURN CONTACT DETAILS
+        # =====================================================
+
         serializer = RevealUserDetailsSerializer(viewed_user)
 
         return self.success_response(
