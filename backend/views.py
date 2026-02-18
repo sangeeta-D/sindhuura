@@ -364,7 +364,7 @@ def user_details(request, user_id):
     subscription = SubscriptionPayment.objects.filter(
         user=user,
         payment_status='success'
-    ).select_related('subscription').order_by('-paid_at').first()
+    ).select_related('subscription').first()
     
     # ✅ Calculate expiry date if expires_at is NULL
     if subscription and not subscription.expires_at and subscription.created_at:

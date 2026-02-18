@@ -7,6 +7,7 @@ import uuid
 import random
 import re
 from django.db.models import Max
+from datetime import timedelta
 # Create your models here.
 
 class CustomUserManager(BaseUserManager):
@@ -439,6 +440,16 @@ class SubscriptionPayment(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Subscription Payment"
         verbose_name_plural = "Subscription Payments"
+
+
+    @property
+    def calculated_expiry(self):
+        base_date = self.paid_at or self.created_at
+        return base_date + timedelta(days=self.subscription.validity)
+
+    @property
+    def is_expired(self):
+        return self.calculated_expiry < timezone.now()
 
     def __str__(self):
         return f"{self.user.email} - ₹{self.amount} - {self.payment_status}"
