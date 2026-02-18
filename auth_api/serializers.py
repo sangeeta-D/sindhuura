@@ -407,6 +407,11 @@ class MatrimonyProfileSerializer(serializers.ModelSerializer):
     # 🔹 Display religion and caste with both id and name
     religion = serializers.SerializerMethodField()
     caste = serializers.SerializerMethodField()
+    
+    # 🔹 Read-only user fields
+    email = serializers.CharField(source="user.email", read_only=True)
+    phone_number = serializers.CharField(source="user.phone_number", read_only=True)
+    profile_reveal_count = serializers.IntegerField(source="user.profile_reveal_count", read_only=True)
 
     class Meta:
         model = MatrimonyProfile

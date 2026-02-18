@@ -482,6 +482,7 @@ class MatrimonyProfileAPIView(APIView, APIResponseMixin):
             'plan_limit': subscription_limit,
             'contact_viewed': views_count,
             'contact_remaining': remaining_views,
+            'profile_reveal_count': request.user.profile_reveal_count,
             'expiry_date': expiry_date.isoformat() if expiry_date else None
         }
 
