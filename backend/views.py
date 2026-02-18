@@ -728,8 +728,7 @@ def delete_success_story(request, story_id):
     return redirect("success_stories")
 
 def revenue(request):
-    import pytz
-    
+
     selected_month = request.GET.get("month")
     from_date = request.GET.get("from_date")
     to_date = request.GET.get("to_date")
@@ -757,17 +756,6 @@ def revenue(request):
         to_dt = make_aware(datetime.strptime(to_date, "%Y-%m-%d"))
         payments = payments.filter(created_at__lte=to_dt)
 
-    # ✅ Convert all payment times to IST
-    ist = pytz.timezone('Asia/Kolkata')
-    for payment in payments:
-        if payment.created_at:
-            # Convert UTC to IST
-            if timezone.is_naive(payment.created_at):
-                aware_time = timezone.make_aware(payment.created_at, timezone.utc)
-            else:
-                aware_time = payment.created_at
-            payment.created_at_ist = aware_time.astimezone(ist)
-
     # Statistics
     total_revenue = payments.filter(
         payment_status="success"
@@ -775,21 +763,18 @@ def revenue(request):
 
     success_count = payments.filter(payment_status="success").count()
     failed_count = payments.filter(payment_status="failed").count()
-    refunded_count = payments.filter(payment_status="refunded").count()
 
     context = {
         "payments": payments,
         "total_revenue": total_revenue,
         "success_count": success_count,
         "failed_count": failed_count,
-        "refunded_count": refunded_count,
         "selected_month": selected_month,
         "from_date": from_date,
         "to_date": to_date,
     }
 
     return render(request, "revenue.html", context)
-
 
 def match_requests_list(request):
     match_requests = (
