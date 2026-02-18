@@ -75,9 +75,9 @@
             <strong>Expiry Date:</strong> 
             <p class="mb-0">
               {% if subscription.calculated_expiry %}
-                {{ subscription.calculated_expiry|date:\"d M Y\" }}
+                {{ subscription.calculated_expiry|date:"d M Y" }}
                 <br>
-                <small class=\"badge {% if subscription.is_expired %}bg-danger{% else %}bg-success{% endif %}\">
+                <small class="badge {% if subscription.is_expired %}bg-danger{% else %}bg-success{% endif %}">
                   {% if subscription.is_expired %}Expired{% else %}Active{% endif %}
                 </small>
               {% else %}
