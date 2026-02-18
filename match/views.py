@@ -307,7 +307,7 @@ class ReceivedMatchRequestListAPIView(APIResponseMixin, APIView):
     def get(self, request):
         try:
             received_requests = MatchRequest.objects.filter(
-                to_user=request.user,status="pending" 
+                to_user=request.user,status__in=["pending", "accepted"]
             ).select_related(
                 "from_user"
             ).order_by("-created_at")
