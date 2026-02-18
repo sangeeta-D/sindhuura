@@ -368,7 +368,7 @@ class UserFullDetailAPIView(APIView, APIResponseMixin):
         )
 
 class RevealUserFullDetailAPIView(APIView, APIResponseMixin):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def get(self, request, user_id):
         print("VIEW EXECUTED")
