@@ -124,7 +124,7 @@
               <td class="truncate" title="{{ payment.transaction_id }}">
                 {{ payment.transaction_id }}
               </td>
-              <td class="nowrap">{{ payment.created_at|date:"d M Y, h:i A" }}</td>
+              <td class="nowrap">{{ payment.created_at_ist|date:"d M Y, h:i A" }}</td>
             </tr>
             {% empty %}
             <tr>

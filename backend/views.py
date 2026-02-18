@@ -726,7 +726,6 @@ def delete_success_story(request, story_id):
     story.delete()
     messages.success(request, "Success story deleted successfully.")
     return redirect("success_stories")
-
 def revenue(request):
 
     selected_month = request.GET.get("month")
@@ -755,6 +754,11 @@ def revenue(request):
     if to_date:
         to_dt = make_aware(datetime.strptime(to_date, "%Y-%m-%d"))
         payments = payments.filter(created_at__lte=to_dt)
+
+    # ✅ Convert to IST
+    ist = pytz.timezone("Asia/Kolkata")
+    for payment in payments:
+        payment.created_at_ist = timezone.localtime(payment.created_at, ist)
 
     # Statistics
     total_revenue = payments.filter(
