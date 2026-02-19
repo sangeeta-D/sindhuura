@@ -115,3 +115,61 @@ def send_sms_otp(phone_number: str, otp: str) -> bool:
     except Exception as e:
         logger.exception("Exception occurred while sending OTP SMS")
         return False
+    
+
+def send_registration_sms(phone_number: str) -> bool:
+    """
+    Send Registration Success SMS using MyLogin SendSMS v2 API
+    (No dynamic variables in template)
+    """
+    try:
+        phone_number = phone_number.strip()
+
+        if phone_number.startswith("+"):
+            phone_number = phone_number[1:]
+
+        if not phone_number.startswith("91"):
+            mobile = f"91{phone_number[-10:]}"
+        else:
+            mobile = phone_number
+
+        url = "https://api.mylogin.co.in/api/v2/SendSMS"
+
+        payload = {
+            "SenderId": settings.MYSMSMANTRA_SENDER_ID,
+            "MobileNumbers": mobile,
+            "ApiKey": settings.MYSMSMANTRA_API_KEY,
+            "ClientId": settings.MYSMSMANTRA_CLIENT_ID,
+            "TemplateId": settings.MYSMSMANTRA_REG_TEMPLATE_ID,
+            "Message": settings.MYSMSMANTRA_REG_TEMPLATE_MESSAGE,
+            "Is_Unicode": False,
+            "Is_Flash": False,
+            "IsRegisteredForDelivery": True,
+            "DataCoding": "00",
+            "GroupId": ""
+        }
+
+        headers = {
+            "Content-Type": "application/json",
+            "Type": "json"
+        }
+
+        response = requests.post(
+            url,
+            json=payload,
+            headers=headers,
+            timeout=15
+        )
+
+        if response.status_code != 200:
+            return False
+
+        data = response.json()
+
+        if str(data.get("ErrorCode")) == "0":
+            return True
+
+        return False
+
+    except Exception:
+        return False

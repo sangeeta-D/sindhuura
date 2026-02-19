@@ -23,7 +23,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.db import models
 from .pagination import BlogPagination
-from .utils import send_sms_otp
+from .utils import send_sms_otp,send_registration_sms
 import random
 # register API View
 class RegisterAPIView(APIResponseMixin, APIView):
@@ -44,6 +44,15 @@ class RegisterAPIView(APIResponseMixin, APIView):
         # 🔐 Generate JWT Tokens
         refresh = RefreshToken.for_user(user)
 
+        # ✅ Send Registration SMS (NON-BLOCKING recommended)
+        try:
+            send_registration_sms(
+                phone_number=user.phone_number,  # make sure field exists
+                name=user.name
+            )
+        except Exception:
+            pass  # Do not break registration if SMS fails
+
         response_data = {
             "access_token": str(refresh.access_token),
             "refresh_token": str(refresh),
@@ -51,7 +60,7 @@ class RegisterAPIView(APIResponseMixin, APIView):
                 "id": user.id,
                 "email": user.email,
                 "name": user.name,
-                "unique_id": user.unique_id, 
+                "unique_id": user.unique_id,
             },
             "profile": {
                 "id": profile.id
