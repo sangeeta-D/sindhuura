@@ -432,57 +432,46 @@ class MatrimonyProfileAPIView(APIView, APIResponseMixin):
                 status.HTTP_404_NOT_FOUND
             )
 
-        serializer = MatrimonyProfileSerializer(profile, context={"request": request})
+        serializer = MatrimonyProfileSerializer(
+            profile,
+            context={"request": request}
+        )
+
         data = serializer.data
 
-        # 🔹 Add subscription details
-        from datetime import timedelta
+        # 🔹 Subscription Details
         subscription_plan = None
-        subscription_limit = 0
-        views_count = 0
-        remaining_views = 0
+        reveal_limit = 0
+        reveal_contact_count = 0
+        reveal_remaining = 0
         expiry_date = None
 
-        # Get the latest active subscription payment
+        # Get latest successful payment
         latest_payment = SubscriptionPayment.objects.filter(
             user=request.user,
             payment_status='success'
         ).order_by('-paid_at').first()
 
-        if latest_payment:
-            # Check if subscription is still valid
-            paid_date = latest_payment.paid_at
-            validity_days = latest_payment.subscription.validity
-            expiry_date = paid_date + timedelta(days=validity_days)
+        if latest_payment and latest_payment.paid_at:
+            expiry_date = latest_payment.paid_at + timedelta(
+                days=latest_payment.subscription.validity
+            )
 
+            # Check if subscription is active
             if expiry_date >= timezone.now():
-                plan_name = latest_payment.subscription.plan_name.lower()
-
-                if 'silver' in plan_name:
-                    subscription_plan = 'silver'
-                    subscription_limit = 27
-                elif 'prime' in plan_name or 'gold' in plan_name:
-                    subscription_plan = 'prime_gold'
-                    subscription_limit = 45
-                elif 'diamond' in plan_name:
-                    subscription_plan = 'diamond'
-                    subscription_limit = 120
-
-                # 🔹 Get total contact views for this user
-                from match.models import ContactInfoView
-                total_views = ContactInfoView.objects.filter(
-                    viewed_user=request.user
-                ).aggregate(total=models.Sum('views_count'))['total'] or 0
-
-                views_count = total_views
-                remaining_views = max(0, subscription_limit - views_count)
+                subscription_plan = latest_payment.subscription.plan_name
+                reveal_limit = latest_payment.subscription.reveal_limit
+                reveal_contact_count = request.user.profile_reveal_count
+                reveal_remaining = max(
+                    0,
+                    reveal_limit - reveal_contact_count
+                )
 
         data['subscription'] = {
             'plan': subscription_plan or 'none',
-            'plan_limit': subscription_limit,
-            'contact_viewed': views_count,
-            'contact_remaining': remaining_views,
-            'profile_reveal_count': request.user.profile_reveal_count,
+            'reveal_limit': reveal_limit,
+            'reveal_contact_count': reveal_contact_count,
+            'reveal_remaining': reveal_remaining,
             'expiry_date': expiry_date.isoformat() if expiry_date else None
         }
 
