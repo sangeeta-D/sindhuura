@@ -48,7 +48,6 @@ class RegisterAPIView(APIResponseMixin, APIView):
         try:
             send_registration_sms(
                 phone_number=user.phone_number,  # make sure field exists
-                name=user.name
             )
         except Exception:
             pass  # Do not break registration if SMS fails
