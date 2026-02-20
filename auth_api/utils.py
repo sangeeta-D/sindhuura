@@ -118,10 +118,6 @@ def send_sms_otp(phone_number: str, otp: str) -> bool:
     
 
 def send_registration_sms(phone_number: str) -> bool:
-    """
-    Send Registration Success SMS using MyLogin SendSMS v2 API
-    (No dynamic variables in template)
-    """
     try:
         phone_number = phone_number.strip()
 
@@ -132,6 +128,10 @@ def send_registration_sms(phone_number: str) -> bool:
             mobile = f"91{phone_number[-10:]}"
         else:
             mobile = phone_number
+
+        logger.info(f"[REG SMS] Sending to: {mobile}")
+        logger.info(f"[REG SMS] TemplateId: {settings.MYSMSMANTRA_REG_TEMPLATE_ID}")
+        logger.info(f"[REG SMS] Message: {settings.MYSMSMANTRA_REG_TEMPLATE_MESSAGE}")
 
         url = "https://api.mylogin.co.in/api/v2/SendSMS"
 
@@ -154,22 +154,25 @@ def send_registration_sms(phone_number: str) -> bool:
             "Type": "json"
         }
 
-        response = requests.post(
-            url,
-            json=payload,
-            headers=headers,
-            timeout=15
-        )
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
+
+        logger.info(f"[REG SMS] Status Code: {response.status_code}")
+        logger.info(f"[REG SMS] Raw Response: {response.text}")
 
         if response.status_code != 200:
+            logger.error("[REG SMS] Non-200 response")
             return False
 
         data = response.json()
+        logger.info(f"[REG SMS] Parsed Response: {data}")
 
         if str(data.get("ErrorCode")) == "0":
+            logger.info("[REG SMS] Sent successfully")
             return True
 
+        logger.error(f"[REG SMS] Failed | ErrorCode: {data.get('ErrorCode')} | Description: {data.get('ErrorDescription')}")
         return False
 
-    except Exception:
+    except Exception as e:
+        logger.exception(f"[REG SMS] Exception: {e}")
         return False

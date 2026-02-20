@@ -46,11 +46,10 @@ class RegisterAPIView(APIResponseMixin, APIView):
 
         # ✅ Send Registration SMS (NON-BLOCKING recommended)
         try:
-            send_registration_sms(
-                phone_number=user.phone_number,  # make sure field exists
-            )
-        except Exception:
-            pass  # Do not break registration if SMS fails
+            sms_sent = send_registration_sms(phone_number=user.phone_number)
+            print(f"[REGISTER] SMS result for {user.phone_number}: {sms_sent}")
+        except Exception as e:
+            print(f"[REGISTER] SMS exception: {e}")
 
         response_data = {
             "access_token": str(refresh.access_token),
