@@ -15,6 +15,65 @@ from auth_api.models import SubscriptionPayment
 from chat.firebase import send_push_notification
 from django.utils import timezone
 
+
+class HideMatchAPIView(APIResponseMixin, APIView):
+    """
+    API to hide a user from matches
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        try:
+            user = request.user
+            hidden_user_id = request.data.get('user_id')
+            
+            if not hidden_user_id:
+                return self.error_response(
+                    "user_id is required",
+                    status_code=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Check if user exists
+            try:
+                hidden_user = CustomUser.objects.get(id=hidden_user_id, is_deleted=False)
+            except CustomUser.DoesNotExist:
+                return self.error_response(
+                    "User not found",
+                    status_code=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Prevent hiding yourself
+            if user.id == hidden_user.id:
+                return self.error_response(
+                    "You cannot hide yourself",
+                    status_code=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Create or get hidden match record
+            hidden_match, created = HiddenMatch.objects.get_or_create(
+                user=user,
+                hidden_user=hidden_user
+            )
+            
+            if created:
+                return self.success_response(
+                    message="User hidden successfully",
+                    data={"hidden_user_id": hidden_user.id},
+                    status_code=status.HTTP_201_CREATED
+                )
+            else:
+                return self.success_response(
+                    message="User already hidden",
+                    data={"hidden_user_id": hidden_user.id},
+                    status_code=status.HTTP_200_OK
+                )
+                
+        except Exception as e:
+            return self.error_response(
+                errors=str(e),
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
 class MatchProfileListAPIView(APIResponseMixin, APIView):
     permission_classes = [IsAuthenticated]
 
@@ -44,6 +103,12 @@ class MatchProfileListAPIView(APIResponseMixin, APIView):
             
             # 🔹 Exclude soft-deleted users
             matches = matches.exclude(user__is_deleted=True)
+
+            # 🔹 EXCLUDE HIDDEN USERS - NEW CODE
+            hidden_user_ids = HiddenMatch.objects.filter(
+                user=user
+            ).values_list('hidden_user_id', flat=True)
+            matches = matches.exclude(user__id__in=hidden_user_ids)
 
             # 🔹 Religion / caste filtering
             if my_profile.religion:

@@ -3,6 +3,33 @@ from auth_api.models import CustomUser
 # Create your models here.
 
 
+# models.py
+
+class HiddenMatch(models.Model):
+    """
+    Model to track users that a person wants to hide from their match list
+    """
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='hidden_by_user'
+    )
+    
+    hidden_user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='hidden_users'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('user', 'hidden_user')
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.user.email} hid {self.hidden_user.email}"
+
 class MatchRequest(models.Model):
     STATUS_CHOICES = (
         ('pending', 'Pending'),

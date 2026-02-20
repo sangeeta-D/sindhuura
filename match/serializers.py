@@ -467,3 +467,9 @@ class NotificationSerializer(serializers.ModelSerializer):
             return f"{sender_name} rejected your match request"
         else:
             return obj.message
+        
+
+class HideMatchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HiddenMatch
+        fields = ['id', 'hidden_user', 'created_at']
