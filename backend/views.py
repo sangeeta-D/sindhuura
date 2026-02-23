@@ -756,6 +756,7 @@ def revenue(request):
     if to_date:
         to_dt = make_aware(datetime.strptime(to_date, "%Y-%m-%d"))
         payments = payments.filter(created_at__lte=to_dt)
+
     # Statistics
     total_revenue = payments.filter(
         payment_status="success"

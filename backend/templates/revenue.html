@@ -1,7 +1,7 @@
 {% extends 'admin_base.html' %}
 {% load tz %}
 {% block content %}
-
+{% localtime on %}
 <style>
   .nowrap {
     white-space: nowrap;
@@ -124,7 +124,8 @@
               <td class="truncate" title="{{ payment.transaction_id }}">
                 {{ payment.transaction_id }}
               </td>
-              <td class="nowrap">{{ payment.created_at|localtime|date:"d M Y, h:i A" }}</td>
+              <td class="nowrap">{{ payment.created_at|date:"d M Y, h:i A" }}
+</td>
             </tr>
             {% empty %}
             <tr>
@@ -192,5 +193,6 @@
 
   renderTable();
 </script>
+{% endlocaltime %}
 
 {% endblock %}
