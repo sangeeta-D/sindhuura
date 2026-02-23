@@ -322,6 +322,14 @@ class CreateSubscriptionOrderAPIView(APIView, APIResponseMixin):
         except SubscriptionPlan.DoesNotExist:
             return self.error_response("Invalid subscription plan")
 
+        # ✅ Check if user already has an active subscription
+        if request.user.is_subscribed and request.user.subscription_expires_at:
+            if request.user.subscription_expires_at > timezone.now():
+                return self.error_response(
+                    errors="You already have an active subscription plan. Please wait for it to expire or contact support.",
+                    status_code=status.HTTP_400_BAD_REQUEST
+                )
+
         amount_paise = int(float(plan.price) * 100)
         if amount_paise <= 0:
             return self.error_response("Invalid amount")
