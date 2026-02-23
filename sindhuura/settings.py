@@ -153,6 +153,9 @@ DATABASES = {
     }
 }
 
+TIME_ZONE = "Asia/Kolkata"
+USE_TZ = True
+
 RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID')
 RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET')
 # Password validation
