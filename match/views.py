@@ -151,6 +151,10 @@ class MatchProfileListAPIView(APIResponseMixin, APIView):
             if annual_income:
                 matches = matches.filter(annual_income=annual_income)
 
+            job_type = request.query_params.get('job_type')
+            if job_type:
+                matches = matches.filter(job_type=job_type)
+
             country = request.query_params.get('country')
             if country:
                 matches = matches.filter(country__icontains=country)

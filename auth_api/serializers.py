@@ -101,6 +101,11 @@ class RegisterSerializer(serializers.Serializer):
     annual_income = serializers.ChoiceField(
         choices=MatrimonyProfile.INCOME_CHOICES
     )
+    job_type = serializers.ChoiceField(
+        choices=MatrimonyProfile.JOB_TYPE_CHOICES,
+        required=False,
+        allow_blank=True
+    )
 
     country = serializers.CharField()
     state = serializers.CharField()

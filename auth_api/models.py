@@ -235,6 +235,12 @@ class MatrimonyProfile(models.Model):
         ('1cr+', '1 Crore+'),
     )
 
+    JOB_TYPE_CHOICES = (
+        ('private', 'Private'),
+        ('government', 'Government'),
+        ('business', 'Business'),
+    )
+
     # 🔗 Relation
     user = models.OneToOneField(
         CustomUser,
@@ -291,6 +297,12 @@ class MatrimonyProfile(models.Model):
 
     occupation = models.CharField(max_length=20, choices=OCCUPATION_CHOICES)
     annual_income = models.CharField(max_length=10, choices=INCOME_CHOICES)
+    job_type = models.CharField(
+        max_length=20,
+        choices=JOB_TYPE_CHOICES,
+        null=True,
+        blank=True
+    )
 
     # 🌍 Location
     country = models.CharField(max_length=100)
